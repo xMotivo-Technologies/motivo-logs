@@ -1,15 +1,16 @@
 import { MessageCircle, MessageSquare, Mail, CreditCard, Eye, BadgeCheck, Plus } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 const quickServices = [
-  { title: 'SMS Verification', subtitle: 'Virtual phone numbers', icon: MessageSquare, color: 'bg-orange-500' },
-  // { title: 'Temp Email', subtitle: 'Quick verification codes', icon: Mail, color: 'bg-customBlue' },
-  { title: 'Support Chat', subtitle: 'Chat with support', icon: MessageCircle, color: 'bg-violet-500', online: true },
+  { link: '/sms-verification', title: 'SMS Verification', subtitle: 'Virtual phone numbers', icon: MessageSquare, color: 'bg-orange-500' },
+  // { link: '/temp-email', title: 'Temp Email', subtitle: 'Quick verification codes', icon: Mail, color: 'bg-customBlue' },
+  { link: '/support-chat', title: 'Support Chat', subtitle: 'Chat with support', icon: MessageCircle, color: 'bg-violet-500', online: true },
 ]
 
 const Dashboard = ({ user }) => {
   return (
     <div className="max-w-3xl p-4 sm:p-6">
-      <section className="rounded-2xl bg-linear-to-br from-customBlue to-customBlueDark p-6 text-white">
+      <section className="rounded-2xl bg-customGreenDark p-6 text-white">
         <div className="mb-5 flex items-center gap-3.5">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/25 text-lg font-semibold">
             {user.initials}
@@ -29,9 +30,10 @@ const Dashboard = ({ user }) => {
           <div className="text-3xl font-bold">₦{user.balance.toLocaleString()}</div>
         </div>
 
-        <button className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-white py-3.5 font-semibold text-customBlueDark hover:bg-customBlueLight">
+        
+        <Link to="/fund-wallet" className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-customGreenBright py-3.5 font-semibold text-customGreenDark ">
           <Plus size={16} /> Deposit Funds
-        </button>
+        </Link>
       </section>
 
       <h2 className="mt-6 mb-3.5 text-lg text-gray-900">Quick Services</h2>
@@ -40,6 +42,7 @@ const Dashboard = ({ user }) => {
         {quickServices.map((service) => {
           const Icon = service.icon
           return (
+            <Link to={service.link}>
             <div
               key={service.title}
               className="relative cursor-pointer rounded-2xl border border-gray-200 bg-white p-6 text-center hover:shadow-md"
@@ -55,6 +58,7 @@ const Dashboard = ({ user }) => {
               <div className="mb-1 font-semibold text-gray-900">{service.title}</div>
               <div className="text-sm text-gray-500">{service.subtitle}</div>
             </div>
+            </Link>
           )
         })}
       </div>

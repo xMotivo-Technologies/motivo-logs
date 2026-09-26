@@ -57,7 +57,7 @@ const Sidebar = ({ user, isOpen, onClose }) => {
         onClick={onClose}
         className={({ isActive }) =>
           `flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm ${
-            isActive ? 'bg-customBlueLight font-semibold text-customBlueDark' : 'text-gray-700 hover:bg-gray-100'
+            isActive ? 'bg-customGreenBright/20 font-semibold text-customGreenDark' : 'text-gray-700 hover:bg-gray-100'
           }`
         }
       >
@@ -78,7 +78,7 @@ const Sidebar = ({ user, isOpen, onClose }) => {
           ${isOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full'} lg:translate-x-0`}
       >
         <div className="flex items-center gap-2.5 px-2.5 pt-2 pb-5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-customBlueDark font-semibold text-white">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-customGreenDark font-semibold text-white">
             {user.initials}
           </div>
           <div>

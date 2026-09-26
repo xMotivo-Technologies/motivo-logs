@@ -8,7 +8,8 @@ const Topbar = ({ user, onMenuClick, onLogout }) => {
           <Menu size={22} />
         </button>
         <div className="flex items-center gap-2">
-          <BadgeCheck className="text-customBlueDark shrink-0" size={22} />
+          {/* <BadgeCheck className="text-customBlueDark shrink-0" size={22} /> */}
+          <img className='h-10' src="images/logo.png" alt="Motivo Logs Logo" />
           <span className="text-lg font-bold text-gray-900">Motivo Logs</span>
         </div>
       </div>
@@ -17,7 +18,7 @@ const Topbar = ({ user, onMenuClick, onLogout }) => {
         <button className="text-gray-700 cursor-pointer" aria-label="Notifications">
           <Bell size={20} />
         </button>
-        <div className="w-8 h-8 rounded-full bg-customBlueDark text-white flex items-center justify-center text-sm font-semibold">
+        <div className="w-8 h-8 rounded-full bg-customGreenDark text-white flex items-center justify-center text-sm font-semibold">
           {user.initials}
         </div>
         <button className="text-gray-700 cursor-pointer" onClick={onLogout} aria-label="Log out">

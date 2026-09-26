@@ -48,6 +48,7 @@ const App = () => {
   }
 
   const handleLogout = () => {
+    api.post('/logout').catch(() => {})
     localStorage.removeItem('accessToken')
     localStorage.removeItem('user')
     setUser(null)
