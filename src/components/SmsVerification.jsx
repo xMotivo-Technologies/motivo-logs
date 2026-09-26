@@ -86,7 +86,10 @@ const SmsVerification = () => {
 
   const [isCancelling, setIsCancelling] = useState(false)
   const [cancelError, setCancelError] = useState('')
-  const [cancelResult, setCancelResult] = useState(null)
+  const [isFinishing, setIsFinishing] = useState(false)
+  const [finishError, setFinishError] = useState('')
+  // { type: 'completed' | 'cancelled' | 'expired', refunded, amount }
+  const [orderOutcome, setOrderOutcome] = useState(null)
 
   const [transactions, setTransactions] = useState([])
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true)
@@ -154,14 +157,56 @@ const SmsVerification = () => {
 
   useEffect(loadTransactions, [])
 
-  // Poll the active order until an SMS code arrives.
+  const refreshBalance = () => {
+    api
+      .get('/get-wallet-balance')
+      .then(({ data }) => setBalance(data.balance))
+      .catch(() => {})
+  }
+
+  // Marks the order finished on our side once its code has been received —
+  // called automatically the moment a code shows up, and by the manual
+  // "Finish Order" button as a fallback.
+  const finishActiveOrder = async (orderId) => {
+    setFinishError('')
+    setIsFinishing(true)
+    try {
+      await api.post(`/order/${orderId}/finish`)
+      setOrderOutcome({ type: 'completed' })
+      setActiveOrder(null)
+      loadTransactions()
+    } catch (err) {
+      setFinishError(err.message)
+    } finally {
+      setIsFinishing(false)
+    }
+  }
+
+  // Poll the active order until an SMS code arrives, finishing it
+  // automatically the moment it does — or picking up an automatic refund
+  // if the backend notices it expired without ever receiving one.
   useEffect(() => {
     if (!activeOrder || activeOrder.sms?.length > 0) return
 
     const interval = setInterval(() => {
       api
         .get(`/order/${activeOrder.id}`)
-        .then(({ data }) => setActiveOrder((prev) => (prev ? { ...data.order, amount: prev.amount } : data.order)))
+        .then(({ data }) => {
+          if (data.refunded) {
+            setOrderOutcome({ type: 'expired', refunded: true, amount: data.refundedAmount })
+            setActiveOrder(null)
+            loadTransactions()
+            refreshBalance()
+            return
+          }
+
+          const codeJustArrived = !(activeOrder.sms?.length > 0) && data.order.sms?.length > 0
+          setActiveOrder({ ...data.order, amount: activeOrder.amount })
+
+          if (codeJustArrived) {
+            finishActiveOrder(data.order.id)
+          }
+        })
         .catch(() => {})
     }, ORDER_POLL_INTERVAL_MS)
 
@@ -186,12 +231,10 @@ const SmsVerification = () => {
     setIsCancelling(true)
     try {
       const { data } = await api.post(`/order/${activeOrder.id}/cancel`)
-      setCancelResult({ refunded: data.refunded, amount: data.refundedAmount })
+      setOrderOutcome({ type: 'cancelled', refunded: data.refunded, amount: data.refundedAmount })
+      setActiveOrder(null)
       loadTransactions()
-      api
-        .get('/get-wallet-balance')
-        .then(({ data }) => setBalance(data.balance))
-        .catch(() => {})
+      refreshBalance()
     } catch (err) {
       setCancelError(err.message)
     } finally {
@@ -201,18 +244,12 @@ const SmsVerification = () => {
 
   const handleBackToPurchase = () => {
     setActiveOrder(null)
-    setCancelResult(null)
+    setOrderOutcome(null)
     setCancelError('')
+    setFinishError('')
   }
 
-  const handleFinishOrder = async () => {
-    try {
-      await api.post(`/order/${activeOrder.id}/finish`)
-    } finally {
-      setActiveOrder(null)
-      loadTransactions()
-    }
-  }
+  const handleFinishOrder = () => finishActiveOrder(activeOrder.id)
 
   const handleCopyNumber = async () => {
     try {
@@ -238,100 +275,111 @@ const SmsVerification = () => {
         <section className="rounded-2xl border border-gray-200 bg-white p-6">
           <h2 className="mb-5 text-xl font-semibold text-customGreen">SMS Verification</h2>
 
-          {activeOrder ? (
+          {orderOutcome ? (
+            <div className="text-center">
+              <CheckCircle2 className="mx-auto mb-3 text-customGreen" size={40} />
+              <p className="mb-1 font-semibold text-gray-900">
+                {orderOutcome.type === 'completed'
+                  ? 'Order complete'
+                  : orderOutcome.type === 'expired'
+                    ? 'Order expired'
+                    : 'Order cancelled'}
+              </p>
+              <p className="mb-6 text-sm text-gray-600">
+                {orderOutcome.type === 'completed'
+                  ? 'Your verification code was received successfully.'
+                  : orderOutcome.refunded
+                    ? `₦${orderOutcome.amount.toLocaleString()} has been refunded to your wallet.`
+                    : 'No refund was issued for this order.'}
+              </p>
+              <button
+                onClick={handleBackToPurchase}
+                className="w-full cursor-pointer rounded-xl bg-customGreen py-3 font-semibold text-white hover:bg-customGreenDark"
+              >
+                Back to Purchase
+              </button>
+            </div>
+          ) : activeOrder ? (
             <div>
-              {cancelResult ? (
-                <div className="text-center">
-                  <CheckCircle2 className="mx-auto mb-3 text-customGreen" size={40} />
-                  <p className="mb-1 font-semibold text-gray-900">Order cancelled</p>
-                  <p className="mb-6 text-sm text-gray-600">
-                    {cancelResult.refunded
-                      ? `₦${cancelResult.amount.toLocaleString()} has been refunded to your wallet.`
-                      : 'No refund was issued for this order.'}
-                  </p>
+              <div className="mb-3 grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Service</div>
+                  <div className="font-semibold text-gray-900 capitalize">{activeOrder.product}</div>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Amount</div>
+                  <div className="font-semibold text-gray-900">₦{activeOrder.amount.toLocaleString()}</div>
+                </div>
+              </div>
+
+              <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Order ID</div>
+                <div className="font-semibold text-gray-900">{activeOrder.id}</div>
+              </div>
+
+              <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Your Number</div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-lg font-semibold tracking-wide text-gray-900">{activeOrder.phone}</span>
                   <button
-                    onClick={handleBackToPurchase}
-                    className="w-full cursor-pointer rounded-xl bg-customGreen py-3 font-semibold text-white hover:bg-customGreenDark"
+                    onClick={handleCopyNumber}
+                    className="flex shrink-0 cursor-pointer items-center gap-1.5 text-sm font-semibold text-customGreen hover:text-customGreenDark"
                   >
-                    Back to Purchase
+                    {copied ? <Check size={16} /> : <Copy size={16} />}
+                    {copied ? 'Copied' : 'Copy'}
                   </button>
                 </div>
-              ) : (
-                <>
-                  <div className="mb-3 grid grid-cols-2 gap-3">
-                    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                      <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Service</div>
-                      <div className="font-semibold text-gray-900 capitalize">{activeOrder.product}</div>
-                    </div>
-                    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                      <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Amount</div>
-                      <div className="font-semibold text-gray-900">₦{activeOrder.amount.toLocaleString()}</div>
-                    </div>
-                  </div>
+              </div>
 
-                  <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
-                    <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Order ID</div>
-                    <div className="font-semibold text-gray-900">{activeOrder.id}</div>
+              <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Verification Code</div>
+                {smsCode ? (
+                  <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                    <CheckCircle2 size={18} className="text-customGreen" />
+                    {smsCode}
                   </div>
-
-                  <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
-                    <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Your Number</div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-lg font-semibold tracking-wide text-gray-900">{activeOrder.phone}</span>
-                      <button
-                        onClick={handleCopyNumber}
-                        className="flex shrink-0 cursor-pointer items-center gap-1.5 text-sm font-semibold text-customGreen hover:text-customGreenDark"
-                      >
-                        {copied ? <Check size={16} /> : <Copy size={16} />}
-                        {copied ? 'Copied' : 'Copy'}
-                      </button>
-                    </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 size={16} className="animate-spin" />
+                    Waiting for code...
                   </div>
+                )}
+              </div>
 
-                  <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
-                    <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Verification Code</div>
-                    {smsCode ? (
-                      <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                        <CheckCircle2 size={18} className="text-customGreen" />
-                        {smsCode}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Loader2 size={16} className="animate-spin" />
-                        Waiting for code...
-                      </div>
-                    )}
-                  </div>
-
-                  {cancelError && (
-                    <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{cancelError}</p>
-                  )}
-
-                  <div className="flex gap-3">
-                    {smsCode ? (
-                      <button
-                        onClick={handleFinishOrder}
-                        className="w-full cursor-pointer rounded-xl bg-customGreen py-3 font-semibold text-white hover:bg-customGreenDark"
-                      >
-                        Done
-                      </button>
-                    ) : (
-                      <button
-                        onClick={handleCancelOrder}
-                        disabled={isCancelling}
-                        className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3 font-semibold ${
-                          isCancelling
-                            ? 'cursor-not-allowed border-gray-200 text-gray-400'
-                            : 'cursor-pointer border-gray-300 text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        {isCancelling ? <Loader2 size={18} className="animate-spin" /> : <XCircle size={18} />}
-                        {isCancelling ? 'Cancelling...' : 'Cancel Order'}
-                      </button>
-                    )}
-                  </div>
-                </>
+              {cancelError && (
+                <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{cancelError}</p>
               )}
+              {finishError && (
+                <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{finishError}</p>
+              )}
+
+              <div className="flex gap-3">
+                {smsCode ? (
+                  <button
+                    onClick={handleFinishOrder}
+                    disabled={isFinishing}
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold text-white ${
+                      isFinishing ? 'cursor-not-allowed bg-gray-300' : 'cursor-pointer bg-customGreen hover:bg-customGreenDark'
+                    }`}
+                  >
+                    {isFinishing && <Loader2 size={18} className="animate-spin" />}
+                    {isFinishing ? 'Finishing...' : 'Finish Order'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleCancelOrder}
+                    disabled={isCancelling}
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3 font-semibold ${
+                      isCancelling
+                        ? 'cursor-not-allowed border-gray-200 text-gray-400'
+                        : 'cursor-pointer border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {isCancelling ? <Loader2 size={18} className="animate-spin" /> : <XCircle size={18} />}
+                    {isCancelling ? 'Cancelling...' : 'Cancel Order'}
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <>
