@@ -1,12 +1,54 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Select from 'react-select'
 import * as Flags from 'country-flag-icons/react/3x2'
 import { SiWhatsapp, SiTelegram, SiSignal, SiSnapchat, SiNetflix } from 'react-icons/si'
-import { ChevronLeft, ChevronRight, Loader2, Copy, Check, XCircle, CheckCircle2, Smartphone, AlertTriangle } from 'lucide-react'
+import { Loader2, Copy, Check, XCircle, CheckCircle2, Smartphone, AlertTriangle } from 'lucide-react'
 import api from '../lib/api'
 
 const ORDER_POLL_INTERVAL_MS = 5000
+const HISTORY_PAGE_SIZE = 20
+
+const ORDER_STATUS_STYLES = {
+  completed: 'bg-green-50 text-green-600',
+  cancelled: 'bg-red-50 text-red-600',
+  expired: 'bg-red-50 text-red-600',
+  pending: 'bg-yellow-50 text-yellow-600',
+}
+
+const formatOrderDate = (dateStr) => {
+  const date = new Date(dateStr)
+  const day = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  const time = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+  return `${day}, ${time}`
+}
+
+const naira = (n) => `₦${(n ?? 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+// Two-note chime played the moment a code arrives — generated with the Web
+// Audio API so no sound file needs to be shipped/loaded.
+const playCodeReceivedSound = () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const playTone = (freq, startTime, duration) => {
+      const oscillator = ctx.createOscillator()
+      const gain = ctx.createGain()
+      oscillator.type = 'sine'
+      oscillator.frequency.value = freq
+      gain.gain.setValueAtTime(0.15, startTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration)
+      oscillator.connect(gain)
+      gain.connect(ctx.destination)
+      oscillator.start(startTime)
+      oscillator.stop(startTime + duration)
+    }
+    const now = ctx.currentTime
+    playTone(880, now, 0.15)
+    playTone(1175, now + 0.15, 0.2)
+  } catch {
+    // Web Audio unsupported/blocked — not critical, ignore.
+  }
+}
 
 // 5sim names some countries differently from how users expect to search for them.
 const COUNTRY_LABEL_OVERRIDES = { england: 'UK' }
@@ -91,9 +133,11 @@ const SmsVerification = () => {
   // { type: 'completed' | 'cancelled' | 'expired', refunded, amount }
   const [orderOutcome, setOrderOutcome] = useState(null)
 
-  const [transactions, setTransactions] = useState([])
-  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true)
-  const scrollRef = useRef(null)
+  const [orders, setOrders] = useState([])
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true)
+  const [ordersPage, setOrdersPage] = useState(1)
+  const [ordersPagination, setOrdersPagination] = useState(null)
+  const [cancellingOrderId, setCancellingOrderId] = useState(null)
 
   const [balance, setBalance] = useState(0)
 
@@ -141,21 +185,22 @@ const SmsVerification = () => {
       .finally(() => setIsLoadingProducts(false))
   }, [country])
 
-  const loadTransactions = () => {
-    setIsLoadingTransactions(true)
+  const loadOrders = () => {
+    setIsLoadingOrders(true)
     api
-      .get('/get-transactions')
+      .get('/orders', { params: { page: ordersPage, limit: HISTORY_PAGE_SIZE } })
       .then(({ data }) => {
-        const relevant = (data.data || []).filter((t) =>
-          ['5sim_activation', '5sim_activation_refund'].includes(t.meta?.service),
-        )
-        setTransactions(relevant)
+        setOrders(data.data || [])
+        setOrdersPagination(data.pagination)
       })
-      .catch(() => setTransactions([]))
-      .finally(() => setIsLoadingTransactions(false))
+      .catch(() => {
+        setOrders([])
+        setOrdersPagination(null)
+      })
+      .finally(() => setIsLoadingOrders(false))
   }
 
-  useEffect(loadTransactions, [])
+  useEffect(loadOrders, [ordersPage])
 
   const refreshBalance = () => {
     api
@@ -164,9 +209,9 @@ const SmsVerification = () => {
       .catch(() => {})
   }
 
-  // Marks the order finished on our side once its code has been received —
-  // called automatically the moment a code shows up, and by the manual
-  // "Finish Order" button as a fallback.
+  // Marks the order finished on our side — only triggered by the user
+  // clicking "Finish Order" once they've seen/copied their code, never
+  // automatically, so the code stays visible until they're done with it.
   const finishActiveOrder = async (orderId) => {
     setFinishError('')
     setIsFinishing(true)
@@ -174,7 +219,7 @@ const SmsVerification = () => {
       await api.post(`/order/${orderId}/finish`)
       setOrderOutcome({ type: 'completed' })
       setActiveOrder(null)
-      loadTransactions()
+      loadOrders()
     } catch (err) {
       setFinishError(err.message)
     } finally {
@@ -198,25 +243,23 @@ const SmsVerification = () => {
         return api.get(`/order/${pending.meta.orderId}`).then(({ data }) => {
           if (data.refunded) {
             setOrderOutcome({ type: 'expired', refunded: true, amount: data.refundedAmount })
-            loadTransactions()
+            loadOrders()
             refreshBalance()
             return
           }
 
           setActiveOrder({ ...data.order, amount: pending.amount })
-
-          if (data.order.sms?.length > 0) {
-            finishActiveOrder(data.order.id)
-          }
         })
       })
       .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Poll the active order until an SMS code arrives, finishing it
-  // automatically the moment it does — or picking up an automatic refund
-  // if the backend notices it expired without ever receiving one.
+  // Poll the active order until an SMS code arrives — stays on this same
+  // order-details view once it does (code just appears here), rather than
+  // jumping away. "Finish Order" is the only thing that ends the order.
+  // Also picks up an automatic refund if the backend notices it expired
+  // without ever receiving one.
   useEffect(() => {
     if (!activeOrder || activeOrder.sms?.length > 0) return
 
@@ -227,7 +270,7 @@ const SmsVerification = () => {
           if (data.refunded) {
             setOrderOutcome({ type: 'expired', refunded: true, amount: data.refundedAmount })
             setActiveOrder(null)
-            loadTransactions()
+            loadOrders()
             refreshBalance()
             return
           }
@@ -236,7 +279,8 @@ const SmsVerification = () => {
           setActiveOrder({ ...data.order, amount: activeOrder.amount })
 
           if (codeJustArrived) {
-            finishActiveOrder(data.order.id)
+            playCodeReceivedSound()
+            loadOrders()
           }
         })
         .catch(() => {})
@@ -251,6 +295,7 @@ const SmsVerification = () => {
     try {
       const { data } = await api.post('/buy/activation', { country, product: service })
       setActiveOrder({ ...data.order, amount: data.amount })
+      loadOrders()
     } catch (err) {
       setPurchaseError(err.message)
     } finally {
@@ -265,7 +310,7 @@ const SmsVerification = () => {
       const { data } = await api.post(`/order/${activeOrder.id}/cancel`)
       setOrderOutcome({ type: 'cancelled', refunded: data.refunded, amount: data.refundedAmount })
       setActiveOrder(null)
-      loadTransactions()
+      loadOrders()
       refreshBalance()
     } catch (err) {
       setCancelError(err.message)
@@ -293,8 +338,20 @@ const SmsVerification = () => {
     }
   }
 
-  const scrollTable = (direction) => {
-    scrollRef.current?.scrollBy({ left: direction * 200, behavior: 'smooth' })
+  const handleCancelHistoryOrder = async (orderId) => {
+    setCancellingOrderId(orderId)
+    try {
+      await api.post(`/order/${orderId}/cancel`)
+      loadOrders()
+      refreshBalance()
+      if (activeOrder?.id === orderId) {
+        setActiveOrder(null)
+      }
+    } catch {
+      // the row simply stays "pending" if this fails — keep it simple
+    } finally {
+      setCancellingOrderId(null)
+    }
   }
 
   const selectedProduct = products.find((p) => p.value === service)
@@ -321,7 +378,7 @@ const SmsVerification = () => {
                 {orderOutcome.type === 'completed'
                   ? 'Your verification code was received successfully.'
                   : orderOutcome.refunded
-                    ? `₦${orderOutcome.amount.toLocaleString()} has been refunded to your wallet.`
+                    ? `${naira(orderOutcome.amount)} has been refunded to your wallet.`
                     : 'No refund was issued for this order.'}
               </p>
               <button
@@ -340,7 +397,7 @@ const SmsVerification = () => {
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                   <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Amount</div>
-                  <div className="font-semibold text-gray-900">₦{activeOrder.amount.toLocaleString()}</div>
+                  <div className="font-semibold text-gray-900">{naira(activeOrder.amount)}</div>
                 </div>
               </div>
 
@@ -508,7 +565,7 @@ const SmsVerification = () => {
                 {isPurchasing
                   ? 'Purchasing...'
                   : selectedProduct
-                    ? `Pay - ₦${selectedProduct.cost.toLocaleString()}`
+                    ? `Pay - ${naira(selectedProduct.cost)}`
                     : 'Pay'}
               </button>
             </>
@@ -516,42 +573,64 @@ const SmsVerification = () => {
         </section>
 
         <section className="rounded-2xl border border-gray-200 bg-white p-6">
-          <h2 className="mb-5 text-xl font-semibold text-customGreen">Recent Transactions</h2>
+          <h2 className="mb-5 text-2xl font-bold text-gray-900">SMS Order History</h2>
 
-          <div ref={scrollRef} className="overflow-x-auto">
-            <table className="w-full min-w-175 text-left text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-225 text-left text-sm">
               <thead>
                 <tr className="bg-gray-50 text-xs tracking-wide text-gray-500 uppercase">
-                  <th className="px-3 py-2">Reference</th>
-                  <th className="px-3 py-2">Date</th>
-                  <th className="px-3 py-2">Country</th>
-                  <th className="px-3 py-2">Service</th>
-                  <th className="px-3 py-2">Amount</th>
-                  <th className="px-3 py-2">Status</th>
+                  <th className="px-4 py-3">Order ID</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Phone Number</th>
+                  <th className="px-4 py-3">Code</th>
+                  <th className="px-4 py-3">Service</th>
+                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {isLoadingTransactions ? (
+                {isLoadingOrders ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-gray-400">
-                      <Loader2 size={16} className="mx-auto animate-spin" />
+                    <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                      <Loader2 size={18} className="mx-auto animate-spin" />
                     </td>
                   </tr>
-                ) : transactions.length === 0 ? (
+                ) : orders.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-gray-400">
+                    <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                       No verification purchases yet.
                     </td>
                   </tr>
                 ) : (
-                  transactions.map((t) => (
-                    <tr key={t._id} className="border-b border-gray-100">
-                      <td className="px-3 py-3 font-bold text-gray-900">{t.reference}</td>
-                      <td className="px-3 py-3 text-gray-600">{new Date(t.createdAt).toLocaleString()}</td>
-                      <td className="px-3 py-3 text-gray-600 capitalize">{t.meta?.country || '—'}</td>
-                      <td className="px-3 py-3 text-gray-600 capitalize">{t.meta?.product || '—'}</td>
-                      <td className="px-3 py-3 text-gray-600">₦{t.amount.toLocaleString()}</td>
-                      <td className="px-3 py-3 text-gray-600 capitalize">{t.status}</td>
+                  orders.map((o) => (
+                    <tr key={o._id} className="border-b border-gray-100">
+                      <td className="px-4 py-4 text-gray-800">{o.orderId}</td>
+                      <td className="px-4 py-4 text-gray-600">{formatOrderDate(o.createdAt)}</td>
+                      <td className="px-4 py-4 text-gray-600">{o.phone || '—'}</td>
+                      <td className="px-4 py-4 text-gray-600">{o.code || ''}</td>
+                      <td className="px-4 py-4 text-gray-600 capitalize">{o.service}</td>
+                      <td className="px-4 py-4 text-gray-800">{naira(o.amount)}</td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
+                            ORDER_STATUS_STYLES[o.status] || 'bg-gray-100 text-gray-500'
+                          }`}
+                        >
+                          {o.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        {o.status === 'pending' && (
+                          <button
+                            onClick={() => handleCancelHistoryOrder(o.orderId)}
+                            disabled={cancellingOrderId === o.orderId}
+                            className="cursor-pointer text-sm font-semibold text-red-500 hover:text-red-600 disabled:cursor-not-allowed disabled:text-gray-300"
+                          >
+                            {cancellingOrderId === o.orderId ? 'Cancelling...' : 'Cancel'}
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -559,22 +638,29 @@ const SmsVerification = () => {
             </table>
           </div>
 
-          <div className="mt-3 flex justify-end gap-2">
-            <button
-              onClick={() => scrollTable(-1)}
-              className="cursor-pointer rounded-full border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-100"
-              aria-label="Scroll left"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button
-              onClick={() => scrollTable(1)}
-              className="cursor-pointer rounded-full border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-100"
-              aria-label="Scroll right"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
+          {ordersPagination && ordersPagination.totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+              <span>
+                Page {ordersPagination.page} of {ordersPagination.totalPages}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setOrdersPage((p) => p - 1)}
+                  disabled={!ordersPagination.hasPrevPage}
+                  className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setOrdersPage((p) => p + 1)}
+                  disabled={!ordersPagination.hasNextPage}
+                  className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       </div>
     </div>
