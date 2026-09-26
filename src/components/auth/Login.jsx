@@ -71,7 +71,7 @@ const Login = ({ onSuccess }) => {
           type="submit"
           disabled={isSubmitting}
           className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold text-white ${
-            isSubmitting ? 'cursor-not-allowed bg-gray-300' : 'cursor-pointer bg-customBlue hover:bg-customBlueDark'
+            isSubmitting ? 'cursor-not-allowed bg-gray-300' : 'cursor-pointer bg-customGreen hover:bg-customGreenDark'
           }`}
         >
           {isSubmitting && <Loader2 className="animate-spin" size={18} />}
@@ -81,7 +81,7 @@ const Login = ({ onSuccess }) => {
 
       <p className="mt-6 text-center text-sm text-gray-600">
         Don't have an account?{' '}
-        <Link to="/register" className="font-semibold text-customBlue hover:text-customBlueDark">
+        <Link to="/register" className="font-semibold text-customGreen hover:text-customGreenDark">
           Sign up
         </Link>
       </p>

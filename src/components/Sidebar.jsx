@@ -35,7 +35,7 @@ const bottomMenu = [
 
 const Sidebar = ({ user, isOpen, onClose }) => {
   const renderItem = (item) => {
-    const Icon = item.icon
+    const Icon = item.icon 
 
     if (item.comingSoon) {
       return (

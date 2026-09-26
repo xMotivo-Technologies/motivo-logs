@@ -73,11 +73,11 @@ const Register = () => {
     return (
       <AuthLayout title="Account created">
         <div className="text-center">
-          <CheckCircle2 className="mx-auto mb-3 text-customBlue" size={40} />
+          <CheckCircle2 className="mx-auto mb-3 text-customGreen" size={40} />
           <p className="mb-6 text-sm text-gray-600">Your account has been created. You can now log in.</p>
           <button
             onClick={() => navigate('/login')}
-            className="w-full cursor-pointer rounded-xl bg-customBlue py-3 font-semibold text-white hover:bg-customBlueDark"
+            className="w-full cursor-pointer rounded-xl bg-customGreen py-3 font-semibold text-white hover:bg-customGreenDark"
           >
             Continue to Login
           </button>
@@ -132,7 +132,7 @@ const Register = () => {
           type="submit"
           disabled={isSubmitting}
           className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold text-white ${
-            isSubmitting ? 'cursor-not-allowed bg-gray-300' : 'cursor-pointer bg-customBlue hover:bg-customBlueDark'
+            isSubmitting ? 'cursor-not-allowed bg-gray-300' : 'cursor-pointer bg-customGreen hover:bg-customGreenDark'
           }`}
         >
           {isSubmitting && <Loader2 className="animate-spin" size={18} />}
@@ -142,7 +142,7 @@ const Register = () => {
 
       <p className="mt-6 text-center text-sm text-gray-600">
         Already have an account?{' '}
-        <Link to="/login" className="font-semibold text-customBlue hover:text-customBlueDark">
+        <Link to="/login" className="font-semibold text-customGreen hover:text-customGreenDark">
           Log in
         </Link>
       </p>
