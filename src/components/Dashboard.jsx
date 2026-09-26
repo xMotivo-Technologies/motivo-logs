@@ -1,4 +1,5 @@
-import { MessageCircle, MessageSquare, Mail, CreditCard, Eye, BadgeCheck, Plus } from 'lucide-react'
+import { useState } from 'react'
+import { MessageCircle, MessageSquare, Mail, CreditCard, Eye, EyeOff, BadgeCheck, Plus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const quickServices = [
@@ -8,6 +9,8 @@ const quickServices = [
 ]
 
 const Dashboard = ({ user }) => {
+  const [showBalance, setShowBalance] = useState(true)
+
   return (
     <div className="max-w-3xl p-4 sm:p-6">
       <section className="rounded-2xl bg-customGreenDark p-6 text-white">
@@ -17,7 +20,7 @@ const Dashboard = ({ user }) => {
           </div>
           <div>
             <div className="flex items-center gap-1.5 text-lg font-bold">
-              {user.name} <BadgeCheck size={16} />
+              {user.name} 
             </div>
             <div className="text-sm text-white/85">Welcome back!</div>
           </div>
@@ -25,9 +28,17 @@ const Dashboard = ({ user }) => {
 
         <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 text-sm text-white/90">
-            <CreditCard size={16} /> Balance <Eye size={16} />
+            <CreditCard size={16} /> Balance
+            <button
+              type="button"
+              onClick={() => setShowBalance((v) => !v)}
+              className="cursor-pointer text-white/90 hover:text-white"
+              aria-label={showBalance ? 'Hide balance' : 'Show balance'}
+            >
+              {showBalance ? <Eye size={16} /> : <EyeOff size={16} />}
+            </button>
           </div>
-          <div className="text-3xl font-bold">₦{user.balance.toLocaleString()}</div>
+          <div className="text-3xl font-bold">{showBalance ? `₦${user.balance.toLocaleString()}` : '₦••••••'}</div>
         </div>
 
         

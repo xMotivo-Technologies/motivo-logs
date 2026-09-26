@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import Select from 'react-select'
 import * as Flags from 'country-flag-icons/react/3x2'
 import { SiWhatsapp, SiTelegram, SiSignal, SiSnapchat, SiNetflix } from 'react-icons/si'
-import { ChevronLeft, ChevronRight, Loader2, Copy, Check, XCircle, CheckCircle2, Smartphone } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, Copy, Check, XCircle, CheckCircle2, Smartphone, AlertTriangle } from 'lucide-react'
 import api from '../lib/api'
 
 const ORDER_POLL_INTERVAL_MS = 5000
@@ -83,9 +84,22 @@ const SmsVerification = () => {
   const [activeOrder, setActiveOrder] = useState(null)
   const [copied, setCopied] = useState(false)
 
+  const [isCancelling, setIsCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState('')
+  const [cancelResult, setCancelResult] = useState(null)
+
   const [transactions, setTransactions] = useState([])
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true)
   const scrollRef = useRef(null)
+
+  const [balance, setBalance] = useState(0)
+
+  useEffect(() => {
+    api
+      .get('/get-wallet-balance')
+      .then(({ data }) => setBalance(data.balance))
+      .catch(() => setBalance(0))
+  }, [])
 
   // Country list from 5sim — loaded once.
   useEffect(() => {
@@ -147,7 +161,7 @@ const SmsVerification = () => {
     const interval = setInterval(() => {
       api
         .get(`/order/${activeOrder.id}`)
-        .then(({ data }) => setActiveOrder(data.order))
+        .then(({ data }) => setActiveOrder((prev) => (prev ? { ...data.order, amount: prev.amount } : data.order)))
         .catch(() => {})
     }, ORDER_POLL_INTERVAL_MS)
 
@@ -159,7 +173,7 @@ const SmsVerification = () => {
     setIsPurchasing(true)
     try {
       const { data } = await api.post('/buy/activation', { country, product: service })
-      setActiveOrder(data.order)
+      setActiveOrder({ ...data.order, amount: data.amount })
     } catch (err) {
       setPurchaseError(err.message)
     } finally {
@@ -168,14 +182,27 @@ const SmsVerification = () => {
   }
 
   const handleCancelOrder = async () => {
+    setCancelError('')
+    setIsCancelling(true)
     try {
-      await api.post(`/order/${activeOrder.id}/cancel`)
-    } catch {
-      // still clear locally even if the cancel call fails
-    } finally {
-      setActiveOrder(null)
+      const { data } = await api.post(`/order/${activeOrder.id}/cancel`)
+      setCancelResult({ refunded: data.refunded, amount: data.refundedAmount })
       loadTransactions()
+      api
+        .get('/get-wallet-balance')
+        .then(({ data }) => setBalance(data.balance))
+        .catch(() => {})
+    } catch (err) {
+      setCancelError(err.message)
+    } finally {
+      setIsCancelling(false)
     }
+  }
+
+  const handleBackToPurchase = () => {
+    setActiveOrder(null)
+    setCancelResult(null)
+    setCancelError('')
   }
 
   const handleFinishOrder = async () => {
@@ -203,6 +230,7 @@ const SmsVerification = () => {
 
   const selectedProduct = products.find((p) => p.value === service)
   const smsCode = activeOrder?.sms?.[0]?.code
+  const insufficientBalance = Boolean(selectedProduct) && selectedProduct.cost > balance
 
   return (
     <div className="p-4 sm:p-6">
@@ -212,52 +240,98 @@ const SmsVerification = () => {
 
           {activeOrder ? (
             <div>
-              <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Your Number</div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-lg font-semibold tracking-wide text-gray-900">{activeOrder.phone}</span>
+              {cancelResult ? (
+                <div className="text-center">
+                  <CheckCircle2 className="mx-auto mb-3 text-customGreen" size={40} />
+                  <p className="mb-1 font-semibold text-gray-900">Order cancelled</p>
+                  <p className="mb-6 text-sm text-gray-600">
+                    {cancelResult.refunded
+                      ? `₦${cancelResult.amount.toLocaleString()} has been refunded to your wallet.`
+                      : 'No refund was issued for this order.'}
+                  </p>
                   <button
-                    onClick={handleCopyNumber}
-                    className="flex shrink-0 cursor-pointer items-center gap-1.5 text-sm font-semibold text-customGreen hover:text-customGreenDark"
-                  >
-                    {copied ? <Check size={16} /> : <Copy size={16} />}
-                    {copied ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Verification Code</div>
-                {smsCode ? (
-                  <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                    <CheckCircle2 size={18} className="text-customGreen" />
-                    {smsCode}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <Loader2 size={16} className="animate-spin" />
-                    Waiting for code...
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                {smsCode ? (
-                  <button
-                    onClick={handleFinishOrder}
+                    onClick={handleBackToPurchase}
                     className="w-full cursor-pointer rounded-xl bg-customGreen py-3 font-semibold text-white hover:bg-customGreenDark"
                   >
-                    Done
+                    Back to Purchase
                   </button>
-                ) : (
-                  <button
-                    onClick={handleCancelOrder}
-                    className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-300 py-3 font-semibold text-gray-700 hover:bg-gray-50"
-                  >
-                    <XCircle size={18} /> Cancel
-                  </button>
-                )}
-              </div>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-3 grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                      <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Service</div>
+                      <div className="font-semibold text-gray-900 capitalize">{activeOrder.product}</div>
+                    </div>
+                    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                      <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Amount</div>
+                      <div className="font-semibold text-gray-900">₦{activeOrder.amount.toLocaleString()}</div>
+                    </div>
+                  </div>
+
+                  <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Order ID</div>
+                    <div className="font-semibold text-gray-900">{activeOrder.id}</div>
+                  </div>
+
+                  <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Your Number</div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-lg font-semibold tracking-wide text-gray-900">{activeOrder.phone}</span>
+                      <button
+                        onClick={handleCopyNumber}
+                        className="flex shrink-0 cursor-pointer items-center gap-1.5 text-sm font-semibold text-customGreen hover:text-customGreenDark"
+                      >
+                        {copied ? <Check size={16} /> : <Copy size={16} />}
+                        {copied ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Verification Code</div>
+                    {smsCode ? (
+                      <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                        <CheckCircle2 size={18} className="text-customGreen" />
+                        {smsCode}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Loader2 size={16} className="animate-spin" />
+                        Waiting for code...
+                      </div>
+                    )}
+                  </div>
+
+                  {cancelError && (
+                    <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{cancelError}</p>
+                  )}
+
+                  <div className="flex gap-3">
+                    {smsCode ? (
+                      <button
+                        onClick={handleFinishOrder}
+                        className="w-full cursor-pointer rounded-xl bg-customGreen py-3 font-semibold text-white hover:bg-customGreenDark"
+                      >
+                        Done
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleCancelOrder}
+                        disabled={isCancelling}
+                        className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3 font-semibold ${
+                          isCancelling
+                            ? 'cursor-not-allowed border-gray-200 text-gray-400'
+                            : 'cursor-pointer border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {isCancelling ? <Loader2 size={18} className="animate-spin" /> : <XCircle size={18} />}
+                        {isCancelling ? 'Cancelling...' : 'Cancel Order'}
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <>
@@ -325,15 +399,27 @@ const SmsVerification = () => {
                 />
               </div>
 
+              {insufficientBalance && (
+                <div className="mb-4 flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+                  <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                  <span>
+                    Balance too low to complete this order.{' '}
+                    <Link to="/fund-wallet" className="font-semibold underline hover:text-red-700">
+                      Fund Wallet
+                    </Link>
+                  </span>
+                </div>
+              )}
+
               {purchaseError && (
                 <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{purchaseError}</p>
               )}
 
               <button
                 onClick={handlePurchase}
-                disabled={!service || isPurchasing}
+                disabled={!service || isPurchasing || insufficientBalance}
                 className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-semibold text-white ${
-                  service && !isPurchasing
+                  service && !isPurchasing && !insufficientBalance
                     ? 'cursor-pointer bg-customGreen hover:bg-customGreenDark'
                     : 'cursor-not-allowed bg-gray-300'
                 }`}

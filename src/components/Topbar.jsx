@@ -1,4 +1,5 @@
 import { Menu, Bell, BadgeCheck, LogOut } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 const Topbar = ({ user, onMenuClick, onLogout }) => {
   return (
@@ -15,12 +16,14 @@ const Topbar = ({ user, onMenuClick, onLogout }) => {
       </div>
 
       <div className="flex items-center gap-4">
-        <button className="text-gray-700 cursor-pointer" aria-label="Notifications">
+        {/* <button className="text-gray-700 cursor-pointer" aria-label="Notifications">
           <Bell size={20} />
-        </button>
+        </button> */}
+        <Link to= "/profile" >
         <div className="w-8 h-8 rounded-full bg-customGreenDark text-white flex items-center justify-center text-sm font-semibold">
           {user.initials}
         </div>
+        </Link>
         <button className="text-gray-700 cursor-pointer" onClick={onLogout} aria-label="Log out">
           <LogOut size={20} />
         </button>

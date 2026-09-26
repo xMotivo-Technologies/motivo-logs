@@ -6,6 +6,8 @@ import Home from './pages/Home'
 import Dashboard from './components/Dashboard'
 import SmsVerification from './components/SmsVerification'
 import FundWallet from './components/FundWallet'
+import Transactions from './components/Transactions'
+import Profile from './components/Profile'
 import ComingSoon from './components/ComingSoon'
 import Login from './components/auth/Login'
 import Register from './components/auth/Register'
@@ -54,6 +56,11 @@ const App = () => {
     setUser(null)
   }
 
+  const handleProfileUpdate = (updatedUser) => {
+    localStorage.setItem('user', JSON.stringify(updatedUser))
+    setUser(updatedUser)
+  }
+
   const currentUser = user && {
     name: `${user.firstName} ${user.lastName}`,
     initials: `${user.firstName[0]}${user.lastName[0]}`.toUpperCase(),
@@ -77,7 +84,8 @@ const App = () => {
           <Route path="/dashboard" element={<Dashboard user={currentUser} />} />
           <Route path="/sms-verification" element={<SmsVerification />} />
           <Route path="/fund-wallet" element={<FundWallet />} />
-          <Route path="/transactions" element={<ComingSoon pageName="Transactions" />} />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/profile" element={<Profile user={user} onUpdate={handleProfileUpdate} />} />
           <Route path="/support-chat" element={<ComingSoon pageName="Support Chat" />} />
           <Route path="/faq" element={<ComingSoon pageName="FAQ" />} />
         </Route>

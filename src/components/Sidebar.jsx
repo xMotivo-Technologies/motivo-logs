@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
   Plus,
@@ -77,7 +77,11 @@ const Sidebar = ({ user, isOpen, onClose }) => {
           transition-transform duration-300 ease-in-out
           ${isOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full'} lg:translate-x-0`}
       >
-        <div className="flex items-center gap-2.5 px-2.5 pt-2 pb-5">
+        <Link
+          to="/profile"
+          onClick={onClose}
+          className="mt-2 mb-4 flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-gray-100"
+        >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-customGreenDark font-semibold text-white">
             {user.initials}
           </div>
@@ -85,7 +89,7 @@ const Sidebar = ({ user, isOpen, onClose }) => {
             <div className="text-sm font-semibold text-gray-900">{user.name}</div>
             <div className="text-sm text-gray-500">₦{user.balance.toLocaleString()}</div>
           </div>
-        </div>
+        </Link>
 
         <nav className="flex flex-col gap-0.5">{mainMenu.map(renderItem)}</nav>
 
