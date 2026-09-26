@@ -182,6 +182,38 @@ const SmsVerification = () => {
     }
   }
 
+  // Resume any order still "pending" from a previous visit — otherwise
+  // navigating away (or refreshing) before a code arrives or the order
+  // expires would leave it untracked forever, with nothing left to notice
+  // it needs finishing or refunding.
+  useEffect(() => {
+    api
+      .get('/get-transactions')
+      .then(({ data }) => {
+        const pending = (data.data || []).find(
+          (t) => t.status === 'pending' && t.meta?.service === '5sim_activation' && t.meta?.orderId,
+        )
+        if (!pending) return
+
+        return api.get(`/order/${pending.meta.orderId}`).then(({ data }) => {
+          if (data.refunded) {
+            setOrderOutcome({ type: 'expired', refunded: true, amount: data.refundedAmount })
+            loadTransactions()
+            refreshBalance()
+            return
+          }
+
+          setActiveOrder({ ...data.order, amount: pending.amount })
+
+          if (data.order.sms?.length > 0) {
+            finishActiveOrder(data.order.id)
+          }
+        })
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Poll the active order until an SMS code arrives, finishing it
   // automatically the moment it does — or picking up an automatic refund
   // if the backend notices it expired without ever receiving one.
@@ -372,7 +404,7 @@ const SmsVerification = () => {
                     className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3 font-semibold ${
                       isCancelling
                         ? 'cursor-not-allowed border-gray-200 text-gray-400'
-                        : 'cursor-pointer border-gray-300 text-gray-700 hover:bg-gray-50'
+                        : 'cursor-pointer border-gray-300 text-customGreen hover:bg-customGreenDark hover:text-white'
                     }`}
                   >
                     {isCancelling ? <Loader2 size={18} className="animate-spin" /> : <XCircle size={18} />}
