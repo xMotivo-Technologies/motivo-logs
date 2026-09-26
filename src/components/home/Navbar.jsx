@@ -69,7 +69,7 @@ const Navbar = ({ isLoggedIn }) => {
           </nav>
           <div className="mt-4 flex flex-col gap-2">
             {isLoggedIn ? (
-              <Link to="/dashboard" className="rounded-lg bg-customBlue px-5 py-2.5 text-center text-sm font-semibold text-white">
+              <Link to="/dashboard" className="rounded-lg bg-customGreenDark px-5 py-2.5 text-center text-sm font-semibold text-white">
                 Go to Dashboard
               </Link>
             ) : (
@@ -77,7 +77,7 @@ const Navbar = ({ isLoggedIn }) => {
                 <Link to="/login" className="rounded-lg border border-gray-300 px-5 py-2.5 text-center text-sm font-semibold text-gray-700">
                   Login
                 </Link>
-                <Link to="/register" className="rounded-lg bg-customBlue px-5 py-2.5 text-center text-sm font-semibold text-white">
+                <Link to="/register" className="rounded-lg bg-customGreenDark px-5 py-2.5 text-center text-sm font-semibold text-white">
                   Sign Up Free
                 </Link>
               </>
