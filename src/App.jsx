@@ -9,6 +9,8 @@ import FundWallet from './components/FundWallet'
 import ComingSoon from './components/ComingSoon'
 import Login from './components/auth/Login'
 import Register from './components/auth/Register'
+import ForgotPassword from './components/auth/ForgotPassword'
+import ResetPassword from './components/auth/ResetPassword'
 import api from './lib/api'
 
 const getStoredUser = () => {
@@ -65,6 +67,9 @@ const App = () => {
         <Route path="/login" element={<Login onSuccess={handleAuthSuccess} />} />
         <Route path="/register" element={<Register />} />
       </Route>
+
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
 
       <Route element={<ProtectedRoute user={user} />}>
         <Route element={<AppLayout user={currentUser} onLogout={handleLogout} />}>

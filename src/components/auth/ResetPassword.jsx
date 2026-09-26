@@ -1,32 +1,37 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Lock, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react'
 import AuthLayout from './AuthLayout'
 import TextField from './TextField'
 import api from '../../lib/api'
 
-const Login = ({ onSuccess }) => {
+const ResetPassword = () => {
+  const { token } = useParams()
   const navigate = useNavigate()
-  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [success, setSuccess] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!identifier || !password) {
-      setError('Please fill in all fields')
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
       return
     }
 
     setError('')
     setIsSubmitting(true)
     try {
-      const { data } = await api.post('/login', { identifier, password })
-      onSuccess(data.user, data.accessToken)
-      navigate('/dashboard')
+      await api.post('/reset-password', { token, password })
+      setSuccess(true)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -34,25 +39,35 @@ const Login = ({ onSuccess }) => {
     }
   }
 
+  if (success) {
+    return (
+      <AuthLayout title="Password reset">
+        <div className="text-center">
+          <CheckCircle2 className="mx-auto mb-3 text-customGreen" size={40} />
+          <p className="mb-6 text-sm text-gray-600">
+            Your password has been reset. You can now log in with your new password.
+          </p>
+          <button
+            onClick={() => navigate('/login')}
+            className="w-full cursor-pointer rounded-xl bg-customGreen py-3 font-semibold text-white hover:bg-customGreenDark"
+          >
+            Continue to Login
+          </button>
+        </div>
+      </AuthLayout>
+    )
+  }
+
   return (
-    <AuthLayout title="Welcome back" subtitle="Log in to your Motivo Logs account">
+    <AuthLayout title="Set a new password" subtitle="Choose a new password for your account">
       <form onSubmit={handleSubmit}>
         <TextField
-          label="Email or Username"
-          icon={Mail}
-          type="text"
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
-          placeholder="you@example.com"
-        />
-
-        <TextField
-          label="Password"
+          label="New Password"
           icon={Lock}
           type={showPassword ? 'text' : 'password'}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
+          placeholder="At least 8 characters"
           rightElement={
             <button
               type="button"
@@ -65,11 +80,14 @@ const Login = ({ onSuccess }) => {
           }
         />
 
-        <div className="-mt-2 mb-4 text-right">
-          <Link to="/forgot-password" className="text-xs font-semibold text-customGreen hover:text-customGreenDark">
-            Forgot password?
-          </Link>
-        </div>
+        <TextField
+          label="Confirm New Password"
+          icon={Lock}
+          type={showPassword ? 'text' : 'password'}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="Re-enter new password"
+        />
 
         {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -81,18 +99,17 @@ const Login = ({ onSuccess }) => {
           }`}
         >
           {isSubmitting && <Loader2 className="animate-spin" size={18} />}
-          {isSubmitting ? 'Logging in...' : 'Log In'}
+          {isSubmitting ? 'Resetting...' : 'Reset Password'}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-gray-600">
-        Don't have an account?{' '}
-        <Link to="/register" className="font-semibold text-customGreen hover:text-customGreenDark">
-          Sign up
+        <Link to="/login" className="font-semibold text-customGreen hover:text-customGreenDark">
+          Back to Login
         </Link>
       </p>
     </AuthLayout>
   )
 }
 
-export default Login
+export default ResetPassword
