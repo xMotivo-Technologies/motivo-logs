@@ -8,7 +8,8 @@ import SmsVerification from './components/SmsVerification'
 import FundWallet from './components/FundWallet'
 import Transactions from './components/Transactions'
 import Profile from './components/Profile'
-import ComingSoon from './components/ComingSoon'
+import Support from './components/Support'
+import FAQ from './components/FAQ'
 import Login from './components/auth/Login'
 import Register from './components/auth/Register'
 import ForgotPassword from './components/auth/ForgotPassword'
@@ -58,12 +59,16 @@ const App = () => {
   const [balance, setBalance] = useState(0)
   const [admin, setAdmin] = useState(getStoredAdmin)
 
-  useEffect(() => {
-    if (!user) return
-    api
+  const fetchBalance = () => {
+    return api
       .get('/get-wallet-balance')
       .then(({ data }) => setBalance(data.balance))
       .catch(() => setBalance(0))
+  }
+
+  useEffect(() => {
+    if (!user) return
+    fetchBalance()
   }, [user])
 
   const handleAuthSuccess = (loggedInUser, accessToken) => {
@@ -116,13 +121,13 @@ const App = () => {
 
       <Route element={<ProtectedRoute user={user} />}>
         <Route element={<AppLayout user={currentUser} onLogout={handleLogout} />}>
-          <Route path="/dashboard" element={<Dashboard user={currentUser} />} />
+          <Route path="/dashboard" element={<Dashboard user={currentUser} onRefreshBalance={fetchBalance} />} />
           <Route path="/sms-verification" element={<SmsVerification />} />
           <Route path="/fund-wallet" element={<FundWallet />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/profile" element={<Profile user={user} onUpdate={handleProfileUpdate} />} />
-          <Route path="/support-chat" element={<ComingSoon pageName="Support Chat" />} />
-          <Route path="/faq" element={<ComingSoon pageName="FAQ" />} />
+          <Route path="/support-chat" element={<Support />} />
+          <Route path="/faq" element={<FAQ />} />
         </Route>
       </Route>
 

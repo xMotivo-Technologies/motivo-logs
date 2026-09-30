@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MessageCircle, MessageSquare, Mail, CreditCard, Eye, EyeOff, BadgeCheck, Plus } from 'lucide-react'
+import { MessageCircle, MessageSquare, Mail, CreditCard, Eye, EyeOff, BadgeCheck, Plus, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const quickServices = [
@@ -8,8 +8,19 @@ const quickServices = [
   { link: '/support-chat', title: 'Support Chat', subtitle: 'Chat with support', icon: MessageCircle, color: 'bg-violet-500', online: true },
 ]
 
-const Dashboard = ({ user }) => {
+const Dashboard = ({ user, onRefreshBalance }) => {
   const [showBalance, setShowBalance] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const handleRefreshBalance = async () => {
+    if (!onRefreshBalance) return
+    setRefreshing(true)
+    try {
+      await onRefreshBalance()
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   return (
     <div className="max-w-3xl p-4 sm:p-6">
@@ -36,6 +47,15 @@ const Dashboard = ({ user }) => {
               aria-label={showBalance ? 'Hide balance' : 'Show balance'}
             >
               {showBalance ? <Eye size={16} /> : <EyeOff size={16} />}
+            </button>
+            <button
+              type="button"
+              onClick={handleRefreshBalance}
+              disabled={refreshing}
+              className="cursor-pointer text-white/90 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Refresh balance"
+            >
+              <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
             </button>
           </div>
           <div className="text-3xl font-bold">{showBalance ? `₦${user.balance.toLocaleString()}` : '₦••••••'}</div>
