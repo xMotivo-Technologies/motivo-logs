@@ -24,6 +24,7 @@ import AdminUsers from './components/admin/AdminUsers'
 import AdminUserDetail from './components/admin/AdminUserDetail'
 import AdminOrders from './components/admin/AdminOrders'
 import AdminTransactions from './components/admin/AdminTransactions'
+import useTheme from './hooks/useTheme'
 
 const getStoredUser = () => {
   const saved = localStorage.getItem('user')
@@ -58,6 +59,7 @@ const App = () => {
   const [user, setUser] = useState(getStoredUser)
   const [balance, setBalance] = useState(0)
   const [admin, setAdmin] = useState(getStoredAdmin)
+  const { theme, toggleTheme } = useTheme()
 
   const fetchBalance = () => {
     return api
@@ -120,7 +122,7 @@ const App = () => {
       <Route path="/reset-password/:token" element={<ResetPassword />} />
 
       <Route element={<ProtectedRoute user={user} />}>
-        <Route element={<AppLayout user={currentUser} onLogout={handleLogout} />}>
+        <Route element={<AppLayout user={currentUser} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} />}>
           <Route path="/dashboard" element={<Dashboard user={currentUser} onRefreshBalance={fetchBalance} />} />
           <Route path="/sms-verification" element={<SmsVerification />} />
           <Route path="/fund-wallet" element={<FundWallet />} />

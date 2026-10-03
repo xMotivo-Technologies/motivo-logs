@@ -35,9 +35,9 @@ const ForgotPassword = () => {
     return (
       <AuthLayout title="Check your email">
         <div className="text-center">
-          <CheckCircle2 className="mx-auto mb-3 text-customGreen" size={40} />
-          <p className="mb-6 text-sm text-gray-600">
-            If an account exists for <span className="font-semibold text-gray-800">{email}</span>, a password reset
+          <CheckCircle2 className="mx-auto mb-3 text-customGreen dark:text-customGreenBright" size={40} />
+          <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
+            If an account exists for <span className="font-semibold text-gray-800 dark:text-gray-200">{email}</span>, a password reset
             link has been sent.
           </p>
           <Link
@@ -63,13 +63,13 @@ const ForgotPassword = () => {
           placeholder="you@example.com"
         />
 
-        {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-400">{error}</p>}
 
         <button
           type="submit"
           disabled={isSubmitting}
           className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold text-white ${
-            isSubmitting ? 'cursor-not-allowed bg-gray-300' : 'cursor-pointer bg-customGreen hover:bg-customGreenDark'
+            isSubmitting ? 'cursor-not-allowed bg-gray-300 dark:bg-white/10' : 'cursor-pointer bg-customGreen hover:bg-customGreenDark'
           }`}
         >
           {isSubmitting && <Loader2 className="animate-spin" size={18} />}
@@ -77,9 +77,9 @@ const ForgotPassword = () => {
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-gray-600">
+      <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
         Remembered your password?{' '}
-        <Link to="/login" className="font-semibold text-customGreen hover:text-customGreenDark">
+        <Link to="/login" className="font-semibold text-customGreen hover:text-customGreenDark dark:text-customGreenBright">
           Log in
         </Link>
       </p>

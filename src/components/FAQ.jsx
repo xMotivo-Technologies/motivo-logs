@@ -37,8 +37,8 @@ const FAQ = () => {
 
   return (
     <div className="max-w-3xl p-4 sm:p-6">
-      <h1 className="text-xl font-semibold text-gray-900">Frequently Asked Questions</h1>
-      <p className="mt-1 text-sm text-gray-500">
+      <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Frequently Asked Questions</h1>
+      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
         Quick answers to common questions about verification, wallet funding, and refunds.
       </p>
 
@@ -46,22 +46,22 @@ const FAQ = () => {
         {faqs.map((faq, index) => {
           const isOpen = openIndex === index
           return (
-            <div key={faq.question} className="rounded-2xl border border-gray-200 bg-white">
+            <div key={faq.question} className="rounded-2xl border border-gray-200 bg-white dark:border-white/10 dark:bg-customDarkSurface">
               <button
                 type="button"
                 onClick={() => setOpenIndex(isOpen ? -1 : index)}
                 className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3.5 text-left"
               >
-                <span className="flex items-center gap-2.5 text-sm font-semibold text-gray-900">
-                  <HelpCircle size={16} className="shrink-0 text-customGreenDark" />
+                <span className="flex items-center gap-2.5 text-sm font-semibold text-gray-900 dark:text-white">
+                  <HelpCircle size={16} className="shrink-0 text-customGreenDark dark:text-customGreenBright" />
                   {faq.question}
                 </span>
                 <ChevronDown
                   size={18}
-                  className={`shrink-0 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                  className={`shrink-0 text-gray-400 transition-transform dark:text-gray-500 ${isOpen ? 'rotate-180' : ''}`}
                 />
               </button>
-              {isOpen && <p className="px-4 pb-4 text-sm text-gray-500">{faq.answer}</p>}
+              {isOpen && <p className="px-4 pb-4 text-sm text-gray-500 dark:text-gray-400">{faq.answer}</p>}
             </div>
           )
         })}

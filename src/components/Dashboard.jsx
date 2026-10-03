@@ -70,7 +70,7 @@ const Dashboard = ({ user, onRefreshBalance }) => {
         </Link>
       </section>
 
-      <h2 className="mt-6 mb-3.5 text-lg text-gray-900">Quick Services</h2>
+      <h2 className="mt-6 mb-3.5 text-lg text-gray-900 dark:text-white">Quick Services</h2>
 
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
         {quickServices.map((service) => {
@@ -80,15 +80,15 @@ const Dashboard = ({ user, onRefreshBalance }) => {
             return (
               <div
                 key={service.title}
-                className="relative flex flex-col items-center gap-2.5 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-center sm:p-6"
+                className="relative flex flex-col items-center gap-2.5 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-center sm:p-6 dark:border-white/10 dark:bg-white/5"
               >
-                <span className="absolute top-2.5 right-2.5 rounded-full bg-gray-200 px-1.5 py-0.5 text-[9px] font-bold text-gray-500">
+                <span className="absolute top-2.5 right-2.5 rounded-full bg-gray-200 px-1.5 py-0.5 text-[9px] font-bold text-gray-500 dark:bg-white/10 dark:text-gray-400">
                   SOON
                 </span>
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-200 text-gray-400 sm:h-12 sm:w-12">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-200 text-gray-400 sm:h-12 sm:w-12 dark:bg-white/10 dark:text-gray-500">
                   <Icon size={20} />
                 </div>
-                <div className="text-sm font-semibold text-gray-400">{service.title}</div>
+                <div className="text-sm font-semibold text-gray-400 dark:text-gray-500">{service.title}</div>
               </div>
             )
           }
@@ -97,12 +97,12 @@ const Dashboard = ({ user, onRefreshBalance }) => {
             <Link
               key={service.title}
               to={service.link}
-              className="flex flex-col items-center gap-2.5 rounded-2xl border border-gray-200 bg-white p-4 text-center hover:shadow-md sm:p-6"
+              className="flex flex-col items-center gap-2.5 rounded-2xl border border-gray-200 bg-white p-4 text-center hover:shadow-md sm:p-6 dark:border-white/10 dark:bg-customDarkSurface dark:hover:bg-customDarkSurfaceHover"
             >
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-500 text-white sm:h-12 sm:w-12">
                 <Icon size={20} />
               </div>
-              <div className="text-sm font-semibold text-gray-900">{service.title}</div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-white">{service.title}</div>
             </Link>
           )
         })}

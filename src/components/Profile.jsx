@@ -47,25 +47,25 @@ const Profile = ({ user, onUpdate }) => {
 
   return (
     <div className="p-4 sm:p-6">
-      <section className="max-w-md rounded-2xl border border-gray-200 bg-white p-6">
+      <section className="max-w-md rounded-2xl border border-gray-200 bg-white p-6 dark:border-white/10 dark:bg-customDarkSurface">
         <div className="mb-6 flex items-center gap-3.5">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-customGreenDark text-xl font-semibold text-white">
             {`${user.firstName[0]}${user.lastName[0]}`.toUpperCase()}
           </div>
           <div>
-            <div className="text-lg font-semibold text-gray-900">
+            <div className="text-lg font-semibold text-gray-900 dark:text-white">
               {user.firstName} {user.lastName}
             </div>
-            <div className="text-sm text-gray-500">@{user.username}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">@{user.username}</div>
           </div>
         </div>
 
         {success && (
-          <p className="mb-4 flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-600">
+          <p className="mb-4 flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-600 dark:bg-green-500/10 dark:text-green-400">
             <CheckCircle2 size={16} /> Profile updated successfully
           </p>
         )}
-        {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-400">{error}</p>}
 
         <form onSubmit={handleSave}>
           <div className="grid grid-cols-2 gap-3">
@@ -101,7 +101,7 @@ const Profile = ({ user, onUpdate }) => {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="w-full cursor-pointer rounded-xl border border-gray-300 py-3 font-semibold text-gray-700 hover:bg-gray-50"
+                className="w-full cursor-pointer rounded-xl border border-gray-300 py-3 font-semibold text-gray-700 hover:bg-gray-50 dark:border-white/15 dark:text-gray-300 dark:hover:bg-white/5"
               >
                 Cancel
               </button>
@@ -109,7 +109,7 @@ const Profile = ({ user, onUpdate }) => {
                 type="submit"
                 disabled={isSaving}
                 className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold text-white ${
-                  isSaving ? 'cursor-not-allowed bg-gray-300' : 'cursor-pointer bg-customGreen hover:bg-customGreenDark'
+                  isSaving ? 'cursor-not-allowed bg-gray-300 dark:bg-white/10' : 'cursor-pointer bg-customGreen hover:bg-customGreenDark'
                 }`}
               >
                 {isSaving && <Loader2 size={18} className="animate-spin" />}

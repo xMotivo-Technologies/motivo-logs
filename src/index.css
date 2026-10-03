@@ -2,6 +2,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
 @import 'tailwindcss';
 
+/* Enables `dark:` utilities toggled by a .dark class on <html>, instead of
+   only following the OS-level prefers-color-scheme media query. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Brand colors — change these values to re-theme the whole app */
 @theme {
   --color-customBlueLight: #eff6ff;
@@ -10,12 +14,23 @@
   --color-customGreenDark: #001E2B;
   --color-customGreenBright: #00ED64;
   --color-customBlueDark: #2563eb;
+
+  /* Dark-mode surfaces — built from customGreenDark so both themes share one
+     brand-consistent navy-teal, just at different depths. */
+  --color-customDarkBg: #00141c;
+  --color-customDarkSurface: #0a2733;
+  --color-customDarkSurfaceHover: #0f2f3d;
 }
 
 body {
   margin: 0;
   /* font-family: 'Roboto', sans-serif; */
   font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: #f8fafc;
+}
+
+html.dark body {
+  background-color: var(--color-customDarkBg);
 }
 
 .header-txt {

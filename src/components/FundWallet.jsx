@@ -74,29 +74,29 @@ const FundWallet = () => {
 
   return (
     <div className="p-4 sm:p-6">
-      <section className="max-w-md rounded-2xl border border-gray-200 bg-white p-6">
-        <h2 className="mb-5 text-xl font-semibold text-customGreenDark">Fund Wallet</h2>
+      <section className="max-w-md rounded-2xl border border-gray-200 bg-white p-6 dark:border-white/10 dark:bg-customDarkSurface">
+        <h2 className="mb-5 text-xl font-semibold text-customGreenDark dark:text-white">Fund Wallet</h2>
 
         {isLoading ? (
-          <div className="flex items-center gap-2 text-sm text-gray-500">
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <Loader2 size={16} className="animate-spin" />
             Checking your account...
           </div>
         ) : !account ? (
           <>
-            <p className="mb-6 text-sm text-gray-600">
+            <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
               Generate a dedicated virtual account number to fund your wallet by bank transfer, anytime.
             </p>
 
             {generateError && (
-              <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{generateError}</p>
+              <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-400">{generateError}</p>
             )}
 
             <button
               onClick={handleGenerate}
               disabled={isGenerating}
               className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-semibold text-white ${
-                isGenerating ? 'cursor-not-allowed bg-gray-300' : 'cursor-pointer bg-customGreen hover:bg-customGreenDark'
+                isGenerating ? 'cursor-not-allowed bg-gray-300 dark:bg-white/10' : 'cursor-pointer bg-customGreen hover:bg-customGreenDark'
               }`}
             >
               {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Landmark size={18} />}
@@ -105,22 +105,22 @@ const FundWallet = () => {
           </>
         ) : (
           <>
-            <p className="mb-5 text-sm text-gray-600">
+            <p className="mb-5 text-sm text-gray-600 dark:text-gray-400">
               Transfer to this account anytime to fund your wallet instantly.
             </p>
 
-            <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
-              <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Bank Name</div>
-              <div className="font-semibold text-gray-900">{account.bankName}</div>
+            <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
+              <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Bank Name</div>
+              <div className="font-semibold text-gray-900 dark:text-white">{account.bankName}</div>
             </div>
 
-            <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
-              <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Account Number</div>
+            <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
+              <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Account Number</div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-lg font-semibold tracking-wide text-gray-900">{account.accountNumber}</span>
+                <span className="text-lg font-semibold tracking-wide text-gray-900 dark:text-white">{account.accountNumber}</span>
                 <button
                   onClick={handleCopy}
-                  className="flex shrink-0 cursor-pointer items-center gap-1.5 text-sm font-semibold text-customGreen hover:text-customGreenDark"
+                  className="flex shrink-0 cursor-pointer items-center gap-1.5 text-sm font-semibold text-customGreen hover:text-customGreenDark dark:text-customGreenBright dark:hover:text-white"
                 >
                   {copied ? <Check size={16} /> : <Copy size={16} />}
                   {copied ? 'Copied' : 'Copy'}
@@ -128,9 +128,9 @@ const FundWallet = () => {
               </div>
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-              <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase">Account Name</div>
-              <div className="font-semibold text-gray-900">{account.accountName}</div>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
+              <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Account Name</div>
+              <div className="font-semibold text-gray-900 dark:text-white">{account.accountName}</div>
             </div>
           </>
         )}

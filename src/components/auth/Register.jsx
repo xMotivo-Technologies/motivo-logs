@@ -73,8 +73,8 @@ const Register = () => {
     return (
       <AuthLayout title="Account created">
         <div className="text-center">
-          <CheckCircle2 className="mx-auto mb-3 text-customGreen" size={40} />
-          <p className="mb-6 text-sm text-gray-600">Your account has been created. You can now log in.</p>
+          <CheckCircle2 className="mx-auto mb-3 text-customGreen dark:text-customGreenBright" size={40} />
+          <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">Your account has been created. You can now log in.</p>
           <button
             onClick={() => navigate('/login')}
             className="w-full cursor-pointer rounded-xl bg-customGreen py-3 font-semibold text-white hover:bg-customGreenDark"
@@ -109,7 +109,7 @@ const Register = () => {
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-gray-400"
+              className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-gray-400 dark:text-gray-500"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -126,13 +126,13 @@ const Register = () => {
           placeholder="Re-enter password"
         />
 
-        {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-400">{error}</p>}
 
         <button
           type="submit"
           disabled={isSubmitting}
           className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold text-white ${
-            isSubmitting ? 'cursor-not-allowed bg-gray-300' : 'cursor-pointer bg-customGreen hover:bg-customGreenDark'
+            isSubmitting ? 'cursor-not-allowed bg-gray-300 dark:bg-white/10' : 'cursor-pointer bg-customGreen hover:bg-customGreenDark'
           }`}
         >
           {isSubmitting && <Loader2 className="animate-spin" size={18} />}
@@ -140,9 +140,9 @@ const Register = () => {
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-gray-600">
+      <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
         Already have an account?{' '}
-        <Link to="/login" className="font-semibold text-customGreen hover:text-customGreenDark">
+        <Link to="/login" className="font-semibold text-customGreen hover:text-customGreenDark dark:text-customGreenBright">
           Log in
         </Link>
       </p>
