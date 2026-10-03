@@ -79,12 +79,7 @@ const AdminLogin = ({ onSuccess }) => {
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-gray-600">
-        Need an admin account?{' '}
-        <Link to="/admin/register" className="font-semibold text-customGreen hover:text-customGreenDark">
-          Register
-        </Link>
-      </p>
+
     </AuthLayout>
   )
 }

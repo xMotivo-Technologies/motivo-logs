@@ -133,7 +133,7 @@ const App = () => {
 
       <Route element={<AdminPublicRoute admin={admin} />}>
         <Route path="/admin/login" element={<AdminLogin onSuccess={handleAdminAuthSuccess} />} />
-        <Route path="/admin/register" element={<AdminRegister />} />
+        {/* <Route path="/admin/register" element={<AdminRegister />} /> */}
       </Route>
 
       <Route element={<AdminProtectedRoute admin={admin} />}>
