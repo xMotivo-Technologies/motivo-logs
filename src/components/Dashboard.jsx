@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { MessageCircle, MessageSquare, Mail, CreditCard, Eye, EyeOff, BadgeCheck, Plus, RefreshCw } from 'lucide-react'
+import { CreditCard, Eye, EyeOff, Plus, RefreshCw, Smartphone, Clock, Lock } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import RecentTransactions from './RecentTransactions'
 
 const quickServices = [
-  { link: '/sms-verification', title: 'SMS Verification', subtitle: 'Virtual phone numbers', icon: MessageSquare, color: 'bg-orange-500' },
-  // { link: '/temp-email', title: 'Temp Email', subtitle: 'Quick verification codes', icon: Mail, color: 'bg-customBlue' },
-  { link: '/support-chat', title: 'Support Chat', subtitle: 'Chat with support', icon: MessageCircle, color: 'bg-violet-500', online: true },
+  { link: '/sms-verification', title: 'Sms Verification', icon: Smartphone },
+  { title: 'Rent Numbers', icon: Clock, comingSoon: true },
+  { title: 'Buy Logs', icon: Lock, comingSoon: true },
 ]
 
 const Dashboard = ({ user, onRefreshBalance }) => {
@@ -48,17 +49,19 @@ const Dashboard = ({ user, onRefreshBalance }) => {
             >
               {showBalance ? <Eye size={16} /> : <EyeOff size={16} />}
             </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-3xl font-bold">{showBalance ? `₦${user.balance.toLocaleString()}` : '₦••••••'}</div>
             <button
               type="button"
               onClick={handleRefreshBalance}
               disabled={refreshing}
-              className="cursor-pointer text-white/90 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white/15 text-white/90 hover:bg-white/25 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Refresh balance"
             >
-              <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
             </button>
           </div>
-          <div className="text-3xl font-bold">{showBalance ? `₦${user.balance.toLocaleString()}` : '₦••••••'}</div>
         </div>
 
         
@@ -69,30 +72,43 @@ const Dashboard = ({ user, onRefreshBalance }) => {
 
       <h2 className="mt-6 mb-3.5 text-lg text-gray-900">Quick Services</h2>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
         {quickServices.map((service) => {
           const Icon = service.icon
-          return (
-            <Link to={service.link}>
-            <div
-              key={service.title}
-              className="relative cursor-pointer rounded-2xl border border-gray-200 bg-white p-6 text-center hover:shadow-md"
-            >
-              {service.online && (
-                <span className="absolute top-3 right-3 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-600">
-                  ONLINE
+
+          if (service.comingSoon) {
+            return (
+              <div
+                key={service.title}
+                className="relative flex flex-col items-center gap-2.5 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-center sm:p-6"
+              >
+                <span className="absolute top-2.5 right-2.5 rounded-full bg-gray-200 px-1.5 py-0.5 text-[9px] font-bold text-gray-500">
+                  SOON
                 </span>
-              )}
-              <div className={`mx-auto mb-3.5 flex h-12 w-12 items-center justify-center rounded-xl ${service.color}`}>
-                <Icon size={22} className="text-white" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-200 text-gray-400 sm:h-12 sm:w-12">
+                  <Icon size={20} />
+                </div>
+                <div className="text-sm font-semibold text-gray-400">{service.title}</div>
               </div>
-              <div className="mb-1 font-semibold text-gray-900">{service.title}</div>
-              <div className="text-sm text-gray-500">{service.subtitle}</div>
-            </div>
+            )
+          }
+
+          return (
+            <Link
+              key={service.title}
+              to={service.link}
+              className="flex flex-col items-center gap-2.5 rounded-2xl border border-gray-200 bg-white p-4 text-center hover:shadow-md sm:p-6"
+            >
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-500 text-white sm:h-12 sm:w-12">
+                <Icon size={20} />
+              </div>
+              <div className="text-sm font-semibold text-gray-900">{service.title}</div>
             </Link>
           )
         })}
       </div>
+
+      <RecentTransactions />
     </div>
   )
 }
