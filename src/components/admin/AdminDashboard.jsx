@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Loader2, TrendingUp, DollarSign, RotateCcw, Clock, Wallet, Users, Receipt } from 'lucide-react'
+import { Loader2, TrendingUp, DollarSign, RotateCcw, Clock, Wallet, Users, Receipt, UserPlus, Percent, BadgePercent } from 'lucide-react'
 import adminApi from '../../lib/adminApi'
 
 const StatCard = ({ icon: Icon, label, value, tone }) => (
@@ -13,6 +13,7 @@ const StatCard = ({ icon: Icon, label, value, tone }) => (
 )
 
 const naira = (n) => `₦${(n ?? 0).toLocaleString()}`
+const percent = (n) => `${(n ?? 0).toFixed(1)}%`
 
 const AdminDashboard = () => {
   const [analytics, setAnalytics] = useState(null)
@@ -56,40 +57,143 @@ const AdminDashboard = () => {
         <StatCard icon={Receipt} label="Completed Orders" value={analytics.completedOrders?.toLocaleString()} />
         <StatCard icon={Users} label="Total Users" value={analytics.totalUsers?.toLocaleString()} />
         <StatCard icon={Receipt} label="Total Transactions" value={analytics.totalTransactions?.toLocaleString()} />
+        <StatCard icon={UserPlus} label="Paying Users" value={analytics.payingUsers?.toLocaleString()} />
+        <StatCard icon={Percent} label="Conversion Rate" value={percent(analytics.conversionRate)} />
+        <StatCard icon={BadgePercent} label="Refund Rate" value={percent(analytics.refundRate)} tone={analytics.refundRate > 20 ? 'negative' : undefined} />
+        <StatCard icon={DollarSign} label="Avg Revenue / Paying User" value={naira(analytics.avgRevenuePerUser)} />
       </div>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-6">
-        <h3 className="mb-4 text-lg font-semibold text-gray-900">Revenue — Last 30 Days</h3>
-
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-125 text-left text-sm">
-            <thead>
-              <tr className="bg-gray-50 text-xs tracking-wide text-gray-500 uppercase">
-                <th className="px-3 py-2">Date</th>
-                <th className="px-3 py-2">Orders</th>
-                <th className="px-3 py-2">Revenue</th>
-              </tr>
-            </thead>
-            <tbody>
-              {analytics.dailyBreakdown.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="px-3 py-8 text-center text-gray-400">
-                    No orders in the last 30 days.
-                  </td>
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className="rounded-2xl border border-gray-200 bg-white p-6">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">Top Services</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-100 text-left text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-xs tracking-wide text-gray-500 uppercase">
+                  <th className="px-3 py-2">Service</th>
+                  <th className="px-3 py-2">Orders</th>
+                  <th className="px-3 py-2">Revenue</th>
                 </tr>
-              ) : (
-                analytics.dailyBreakdown.map((d) => (
-                  <tr key={d.date} className="border-b border-gray-100">
-                    <td className="px-3 py-3 text-gray-700">{d.date}</td>
-                    <td className="px-3 py-3 text-gray-600">{d.orders}</td>
-                    <td className="px-3 py-3 font-semibold text-gray-900">{naira(d.revenue)}</td>
+              </thead>
+              <tbody>
+                {analytics.topServices.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-3 py-8 text-center text-gray-400">
+                      No completed orders yet.
+                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                ) : (
+                  analytics.topServices.map((s) => (
+                    <tr key={s.name} className="border-b border-gray-100">
+                      <td className="px-3 py-3 text-gray-700 capitalize">{s.name}</td>
+                      <td className="px-3 py-3 text-gray-600">{s.orders}</td>
+                      <td className="px-3 py-3 font-semibold text-gray-900">{naira(s.revenue)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-gray-200 bg-white p-6">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">Top Countries</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-100 text-left text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-xs tracking-wide text-gray-500 uppercase">
+                  <th className="px-3 py-2">Country</th>
+                  <th className="px-3 py-2">Orders</th>
+                  <th className="px-3 py-2">Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {analytics.topCountries.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-3 py-8 text-center text-gray-400">
+                      No completed orders yet.
+                    </td>
+                  </tr>
+                ) : (
+                  analytics.topCountries.map((c) => (
+                    <tr key={c.name} className="border-b border-gray-100">
+                      <td className="px-3 py-3 text-gray-700 capitalize">{c.name}</td>
+                      <td className="px-3 py-3 text-gray-600">{c.orders}</td>
+                      <td className="px-3 py-3 font-semibold text-gray-900">{naira(c.revenue)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className="rounded-2xl border border-gray-200 bg-white p-6">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">Revenue — Last 30 Days</h3>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-100 text-left text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-xs tracking-wide text-gray-500 uppercase">
+                  <th className="px-3 py-2">Date</th>
+                  <th className="px-3 py-2">Orders</th>
+                  <th className="px-3 py-2">Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {analytics.dailyBreakdown.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-3 py-8 text-center text-gray-400">
+                      No orders in the last 30 days.
+                    </td>
+                  </tr>
+                ) : (
+                  analytics.dailyBreakdown.map((d) => (
+                    <tr key={d.date} className="border-b border-gray-100">
+                      <td className="px-3 py-3 text-gray-700">{d.date}</td>
+                      <td className="px-3 py-3 text-gray-600">{d.orders}</td>
+                      <td className="px-3 py-3 font-semibold text-gray-900">{naira(d.revenue)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-gray-200 bg-white p-6">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">New Signups — Last 30 Days</h3>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-100 text-left text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-xs tracking-wide text-gray-500 uppercase">
+                  <th className="px-3 py-2">Date</th>
+                  <th className="px-3 py-2">New Signups</th>
+                </tr>
+              </thead>
+              <tbody>
+                {analytics.dailySignups.length === 0 ? (
+                  <tr>
+                    <td colSpan={2} className="px-3 py-8 text-center text-gray-400">
+                      No signups in the last 30 days.
+                    </td>
+                  </tr>
+                ) : (
+                  analytics.dailySignups.map((d) => (
+                    <tr key={d.date} className="border-b border-gray-100">
+                      <td className="px-3 py-3 text-gray-700">{d.date}</td>
+                      <td className="px-3 py-3 font-semibold text-gray-900">{d.signups}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </div>
   )
 }

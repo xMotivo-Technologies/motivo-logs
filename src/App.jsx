@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import AppLayout from './components/layout/AppLayout'
 import ProtectedRoute, { PublicRoute } from './components/layout/ProtectedRoute'
 import Home from './pages/Home'
@@ -25,6 +25,7 @@ import AdminUserDetail from './components/admin/AdminUserDetail'
 import AdminOrders from './components/admin/AdminOrders'
 import AdminTransactions from './components/admin/AdminTransactions'
 import useTheme from './hooks/useTheme'
+import { trackPageView } from './lib/analytics'
 
 const getStoredUser = () => {
   const saved = localStorage.getItem('user')
@@ -60,6 +61,11 @@ const App = () => {
   const [balance, setBalance] = useState(0)
   const [admin, setAdmin] = useState(getStoredAdmin)
   const { theme, toggleTheme } = useTheme()
+  const location = useLocation()
+
+  useEffect(() => {
+    trackPageView(location.pathname)
+  }, [location.pathname])
 
   const fetchBalance = () => {
     return api
