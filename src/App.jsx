@@ -25,7 +25,6 @@ import AdminUserDetail from './components/admin/AdminUserDetail'
 import AdminOrders from './components/admin/AdminOrders'
 import AdminTransactions from './components/admin/AdminTransactions'
 import useTheme from './hooks/useTheme'
-import { trackPageView } from './lib/analytics'
 
 const getStoredUser = () => {
   const saved = localStorage.getItem('user')
@@ -64,7 +63,9 @@ const App = () => {
   const location = useLocation()
 
   useEffect(() => {
-    trackPageView(location.pathname)
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', 'page_view', { page_path: location.pathname })
+    }
   }, [location.pathname])
 
   const fetchBalance = () => {

@@ -76,14 +76,14 @@ const AdminDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {analytics.topServices.length === 0 ? (
+                {!analytics.topServices?.length ? (
                   <tr>
                     <td colSpan={3} className="px-3 py-8 text-center text-gray-400">
                       No completed orders yet.
                     </td>
                   </tr>
                 ) : (
-                  analytics.topServices.map((s) => (
+                  (analytics.topServices ?? []).map((s) => (
                     <tr key={s.name} className="border-b border-gray-100">
                       <td className="px-3 py-3 text-gray-700 capitalize">{s.name}</td>
                       <td className="px-3 py-3 text-gray-600">{s.orders}</td>
@@ -108,14 +108,14 @@ const AdminDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {analytics.topCountries.length === 0 ? (
+                {!analytics.topCountries?.length ? (
                   <tr>
                     <td colSpan={3} className="px-3 py-8 text-center text-gray-400">
                       No completed orders yet.
                     </td>
                   </tr>
                 ) : (
-                  analytics.topCountries.map((c) => (
+                  (analytics.topCountries ?? []).map((c) => (
                     <tr key={c.name} className="border-b border-gray-100">
                       <td className="px-3 py-3 text-gray-700 capitalize">{c.name}</td>
                       <td className="px-3 py-3 text-gray-600">{c.orders}</td>
@@ -143,14 +143,14 @@ const AdminDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {analytics.dailyBreakdown.length === 0 ? (
+                {!analytics.dailyBreakdown?.length ? (
                   <tr>
                     <td colSpan={3} className="px-3 py-8 text-center text-gray-400">
                       No orders in the last 30 days.
                     </td>
                   </tr>
                 ) : (
-                  analytics.dailyBreakdown.map((d) => (
+                  (analytics.dailyBreakdown ?? []).map((d) => (
                     <tr key={d.date} className="border-b border-gray-100">
                       <td className="px-3 py-3 text-gray-700">{d.date}</td>
                       <td className="px-3 py-3 text-gray-600">{d.orders}</td>
@@ -175,14 +175,14 @@ const AdminDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {analytics.dailySignups.length === 0 ? (
+                {!analytics.dailySignups?.length ? (
                   <tr>
                     <td colSpan={2} className="px-3 py-8 text-center text-gray-400">
                       No signups in the last 30 days.
                     </td>
                   </tr>
                 ) : (
-                  analytics.dailySignups.map((d) => (
+                  (analytics.dailySignups ?? []).map((d) => (
                     <tr key={d.date} className="border-b border-gray-100">
                       <td className="px-3 py-3 text-gray-700">{d.date}</td>
                       <td className="px-3 py-3 font-semibold text-gray-900">{d.signups}</td>
