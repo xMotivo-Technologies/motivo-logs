@@ -30,6 +30,7 @@ const Hero = () => {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               to="/register"
+              onClick={() => window.ttq?.track('ClickButton')}
               className="flex items-center gap-2 rounded-xl bg-customGreenDark border-2 border-customGreenBright px-6 py-3 font-semibold text-white hover:bg-customGreenBright hover:text-customGreenDark"
             >
               Get Started <ArrowRight size={18} />

@@ -45,6 +45,7 @@ const Navbar = ({ isLoggedIn }) => {
               </Link>
               <Link
                 to="/register"
+                onClick={() => window.ttq?.track('ClickButton')}
                 className="rounded-lg bg-customGreen px-5 py-2 text-sm font-semibold text-white hover:bg-customGreenDark"
               >
                 Sign Up Free
@@ -77,7 +78,14 @@ const Navbar = ({ isLoggedIn }) => {
                 <Link to="/login" className="rounded-lg border border-gray-300 px-5 py-2.5 text-center text-sm font-semibold text-gray-700">
                   Login
                 </Link>
-                <Link to="/register" className="rounded-lg bg-customGreenDark px-5 py-2.5 text-center text-sm font-semibold text-white">
+                <Link
+                  to="/register"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    window.ttq?.track('ClickButton')
+                  }}
+                  className="rounded-lg bg-customGreenDark px-5 py-2.5 text-center text-sm font-semibold text-white"
+                >
                   Sign Up Free
                 </Link>
               </>

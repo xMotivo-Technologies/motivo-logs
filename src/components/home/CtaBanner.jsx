@@ -9,7 +9,11 @@ const CtaBanner = () => (
       </h2>
       <p className="mb-8 text-white/80">Join Motivo Logs today and get instant access to verification and wallet tools.</p>
       <div className="flex flex-wrap justify-center gap-3">
-        <Link to="/register" className="rounded-xl bg-white px-6 py-3 font-semibold text-customGreenDark hover:bg-gray-100">
+        <Link
+          to="/register"
+          onClick={() => window.ttq?.track('ClickButton')}
+          className="rounded-xl bg-white px-6 py-3 font-semibold text-customGreenDark hover:bg-gray-100"
+        >
           Create Free Account
         </Link>
         <Link to="/login" className="rounded-xl border border-white/30 px-6 py-3 font-semibold text-white hover:bg-white/10">
