@@ -26,11 +26,6 @@ body {
   margin: 0;
   /* font-family: 'Roboto', sans-serif; */
   font-family: 'Plus Jakarta Sans', sans-serif;
-  background-color: #f8fafc;
-}
-
-html.dark body {
-  background-color: var(--color-customDarkBg);
 }
 
 .header-txt {
