@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import Select from 'react-select'
 import * as Flags from 'country-flag-icons/react/3x2'
 import { SiWhatsapp, SiTelegram, SiSignal, SiSnapchat, SiNetflix } from 'react-icons/si'
-import { Loader2, Copy, Check, XCircle, CheckCircle2, Smartphone, AlertTriangle } from 'lucide-react'
+import { Loader2, Copy, Check, XCircle, CheckCircle2, Smartphone, AlertTriangle, Info } from 'lucide-react'
 import api from '../lib/api'
 
 const ORDER_POLL_INTERVAL_MS = 5000
@@ -439,6 +439,16 @@ const SmsVerification = () => {
                 )}
               </div>
 
+              {!smsCode && (
+                <div className="mb-4 flex items-start gap-2 rounded-lg bg-customBlueLight px-3 py-2 text-sm text-customBlueDark dark:bg-customBlue/10 dark:text-customBlue">
+                  <Info size={16} className="mt-0.5 shrink-0" />
+                  <span>
+                    SMS not arriving? Try requesting the code again on the service, or cancel the order and try another
+                    number.
+                  </span>
+                </div>
+              )}
+
               {cancelError && (
                 <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-400">{cancelError}</p>
               )}
@@ -538,6 +548,14 @@ const SmsVerification = () => {
                   unstyled
                   classNames={selectClassNames}
                 />
+              </div>
+
+              <div className="mb-4 flex items-start gap-2 rounded-lg bg-customBlueLight px-3 py-2 text-sm text-customBlueDark dark:bg-customBlue/10 dark:text-customBlue">
+                <Info size={16} className="mt-0.5 shrink-0" />
+                <span>
+                  Your IP address' country should be the same as the country of the phone number you bought. Be sure
+                  to use a proxy or VPN.
+                </span>
               </div>
 
               {insufficientBalance && (
