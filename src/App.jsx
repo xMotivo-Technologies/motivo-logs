@@ -24,6 +24,7 @@ import AdminUsers from './components/admin/AdminUsers'
 import AdminUserDetail from './components/admin/AdminUserDetail'
 import AdminOrders from './components/admin/AdminOrders'
 import AdminTransactions from './components/admin/AdminTransactions'
+import AdminOperatorMappings from './components/admin/AdminOperatorMappings'
 import useTheme from './hooks/useTheme'
 
 const getStoredUser = () => {
@@ -152,6 +153,7 @@ const App = () => {
           <Route path="/admin/users/:id" element={<AdminUserDetail />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/transactions" element={<AdminTransactions />} />
+          <Route path="/admin/operator-mappings" element={<AdminOperatorMappings />} />
         </Route>
       </Route>
 

@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Users, ShoppingBag, Receipt } from 'lucide-react'
+import { LayoutDashboard, Users, ShoppingBag, Receipt, Settings2 } from 'lucide-react'
 
 const menu = [
   { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { path: '/admin/users', label: 'Users', icon: Users },
   { path: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { path: '/admin/transactions', label: 'Transactions', icon: Receipt },
+  { path: '/admin/operator-mappings', label: 'Pricing & Operators', icon: Settings2 },
 ]
 
 const AdminSidebar = ({ admin, isOpen, onClose }) => {
