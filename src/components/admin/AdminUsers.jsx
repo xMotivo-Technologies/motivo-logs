@@ -1,20 +1,32 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Search, X } from 'lucide-react'
 import adminApi from '../../lib/adminApi'
 
 const PAGE_SIZE = 20
+const SEARCH_DEBOUNCE_MS = 400
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState(null)
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
+
+  // Debounce the raw input into `search` so we're not firing a request on
+  // every keystroke.
+  useEffect(() => {
+    const id = setTimeout(() => setSearch(searchInput.trim()), SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(id)
+  }, [searchInput])
+
+  useEffect(() => setPage(1), [search])
 
   useEffect(() => {
     setIsLoading(true)
     adminApi
-      .get('/admin/users', { params: { page, limit: PAGE_SIZE } })
+      .get('/admin/users', { params: { page, limit: PAGE_SIZE, search: search || undefined } })
       .then(({ data }) => {
         setUsers(data.data || [])
         setPagination(data.pagination)
@@ -24,12 +36,33 @@ const AdminUsers = () => {
         setPagination(null)
       })
       .finally(() => setIsLoading(false))
-  }, [page])
+  }, [page, search])
 
   return (
     <div className="p-4 sm:p-6">
       <section className="rounded-2xl border border-gray-200 bg-white p-6">
-        <h2 className="mb-5 text-xl font-semibold text-customGreenDark">Users</h2>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold text-customGreenDark">Users</h2>
+
+          <div className="relative w-full max-w-xs">
+            <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-gray-400" />
+            <input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search name, username, email, phone..."
+              className="w-full rounded-lg border border-gray-300 py-2 pr-8 pl-9 text-sm focus:border-customGreen focus:outline-none"
+            />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput('')}
+                className="absolute top-1/2 right-2.5 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-gray-600"
+                aria-label="Clear search"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+        </div>
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-150 text-left text-sm">
@@ -53,7 +86,7 @@ const AdminUsers = () => {
               ) : users.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-3 py-8 text-center text-gray-400">
-                    No users yet.
+                    {search ? `No users match "${search}".` : 'No users yet.'}
                   </td>
                 </tr>
               ) : (
