@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Users, ShoppingBag, Receipt, Settings2 } from 'lucide-react'
+import { LayoutDashboard, Users, ShoppingBag, Receipt, Settings2, Megaphone } from 'lucide-react'
 
 const menu = [
   { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -7,6 +7,7 @@ const menu = [
   { path: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { path: '/admin/transactions', label: 'Transactions', icon: Receipt },
   { path: '/admin/operator-mappings', label: 'Pricing & Operators', icon: Settings2 },
+  { path: '/admin/announcements', label: 'Announcements', icon: Megaphone },
 ]
 
 const AdminSidebar = ({ admin, isOpen, onClose }) => {

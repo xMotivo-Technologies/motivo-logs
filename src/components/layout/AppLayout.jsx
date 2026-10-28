@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Topbar from '../Topbar'
 import Sidebar from '../Sidebar'
+import MarqueeBanner from '../MarqueeBanner'
+import AnnouncementModal from '../AnnouncementModal'
 
 const AppLayout = ({ user, onLogout, theme, onToggleTheme }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -12,7 +14,10 @@ const AppLayout = ({ user, onLogout, theme, onToggleTheme }) => {
 
       <Sidebar user={user} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
+      <AnnouncementModal />
+
       <main className="pt-16 lg:ml-65">
+        <MarqueeBanner />
         <Outlet />
       </main>
     </div>

@@ -5,6 +5,8 @@ import ProtectedRoute, { PublicRoute } from './components/layout/ProtectedRoute'
 import Home from './pages/Home'
 import Dashboard from './components/Dashboard'
 import SmsVerification from './components/SmsVerification'
+import SmsOrderDetail from './components/SmsOrderDetail'
+import SmsHistory from './components/SmsHistory'
 import FundWallet from './components/FundWallet'
 import Transactions from './components/Transactions'
 import Profile from './components/Profile'
@@ -25,6 +27,7 @@ import AdminUserDetail from './components/admin/AdminUserDetail'
 import AdminOrders from './components/admin/AdminOrders'
 import AdminTransactions from './components/admin/AdminTransactions'
 import AdminOperatorMappings from './components/admin/AdminOperatorMappings'
+import AdminAnnouncements from './components/admin/AdminAnnouncements'
 import useTheme from './hooks/useTheme'
 
 const getStoredUser = () => {
@@ -133,6 +136,8 @@ const App = () => {
         <Route element={<AppLayout user={currentUser} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} />}>
           <Route path="/dashboard" element={<Dashboard user={currentUser} onRefreshBalance={fetchBalance} />} />
           <Route path="/sms-verification" element={<SmsVerification />} />
+          <Route path="/sms-verification/:orderId" element={<SmsOrderDetail />} />
+          <Route path="/sms-history" element={<SmsHistory />} />
           <Route path="/fund-wallet" element={<FundWallet />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/profile" element={<Profile user={user} onUpdate={handleProfileUpdate} />} />
@@ -154,6 +159,7 @@ const App = () => {
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/transactions" element={<AdminTransactions />} />
           <Route path="/admin/operator-mappings" element={<AdminOperatorMappings />} />
+          <Route path="/admin/announcements" element={<AdminAnnouncements />} />
         </Route>
       </Route>
 

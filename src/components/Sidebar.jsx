@@ -12,6 +12,7 @@ import {
   HelpCircle,
   KeyRound,
   ChevronRight,
+  History,
 } from 'lucide-react'
 
 // Menu items shown in the middle of the sidebar
@@ -19,6 +20,7 @@ const mainMenu = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/fund-wallet', label: 'Fund Wallet', icon: Plus, hasSubmenu: true },
   { path: '/sms-verification', label: 'SMS Verification', icon: MessageSquare, hasSubmenu: true },
+  { path: '/sms-history', label: 'SMS History', icon: History },
   // { path: '/temp-email', label: 'Temp Email', icon: Mail },
   // { path: '/pay-utilities-bills', label: 'Pay Utilities Bills', icon: Zap, hasSubmenu: true },
   // { path: '/refer-and-earn', label: 'Refer & Earn', icon: Users },

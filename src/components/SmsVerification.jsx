@@ -1,53 +1,19 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Select from 'react-select'
 import * as Flags from 'country-flag-icons/react/3x2'
 import { SiWhatsapp, SiTelegram, SiSignal, SiSnapchat, SiNetflix } from 'react-icons/si'
-import { Loader2, Copy, Check, XCircle, CheckCircle2, Smartphone, AlertTriangle, Info } from 'lucide-react'
+import { Loader2, Smartphone, AlertTriangle, Info, SignalHigh } from 'lucide-react'
 import api from '../lib/api'
-
-const ORDER_POLL_INTERVAL_MS = 5000
-const HISTORY_PAGE_SIZE = 20
-
-const ORDER_STATUS_STYLES = {
-  completed: 'bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400',
-  cancelled: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400',
-  expired: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400',
-  pending: 'bg-yellow-50 text-yellow-600 dark:bg-yellow-500/10 dark:text-yellow-400',
-}
-
-const formatOrderDate = (dateStr) => {
-  const date = new Date(dateStr)
-  const day = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-  const time = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-  return `${day}, ${time}`
-}
 
 const naira = (n) => `₦${(n ?? 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-// Two-note chime played the moment a code arrives — generated with the Web
-// Audio API so no sound file needs to be shipped/loaded.
-const playCodeReceivedSound = () => {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const playTone = (freq, startTime, duration) => {
-      const oscillator = ctx.createOscillator()
-      const gain = ctx.createGain()
-      oscillator.type = 'sine'
-      oscillator.frequency.value = freq
-      gain.gain.setValueAtTime(0.15, startTime)
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration)
-      oscillator.connect(gain)
-      gain.connect(ctx.destination)
-      oscillator.start(startTime)
-      oscillator.stop(startTime + duration)
-    }
-    const now = ctx.currentTime
-    playTone(880, now, 0.15)
-    playTone(1175, now + 0.15, 0.2)
-  } catch {
-    // Web Audio unsupported/blocked — not critical, ignore.
-  }
+// Delivery rate is the strongest signal for picking an operator — color
+// it so a bad choice is obvious at a glance, not just a plain number.
+const rateStyle = (rate) => {
+  if (rate >= 50) return 'bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400'
+  if (rate >= 20) return 'bg-yellow-50 text-yellow-600 dark:bg-yellow-500/10 dark:text-yellow-400'
+  return 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'
 }
 
 // 5sim names some countries differently from how users expect to search for them.
@@ -117,6 +83,8 @@ const ServiceOptionLabel = ({ value, label, cost }) => {
 }
 
 const SmsVerification = () => {
+  const navigate = useNavigate()
+
   const [countries, setCountries] = useState([])
   const [isLoadingCountries, setIsLoadingCountries] = useState(true)
   const [country, setCountry] = useState('')
@@ -125,23 +93,12 @@ const SmsVerification = () => {
   const [isLoadingProducts, setIsLoadingProducts] = useState(false)
   const [service, setService] = useState('')
 
+  const [operators, setOperators] = useState([])
+  const [isLoadingOperators, setIsLoadingOperators] = useState(false)
+  const [selectedOperator, setSelectedOperator] = useState('')
+
   const [isPurchasing, setIsPurchasing] = useState(false)
   const [purchaseError, setPurchaseError] = useState('')
-  const [activeOrder, setActiveOrder] = useState(null)
-  const [copied, setCopied] = useState(false)
-
-  const [isCancelling, setIsCancelling] = useState(false)
-  const [cancelError, setCancelError] = useState('')
-  const [isFinishing, setIsFinishing] = useState(false)
-  const [finishError, setFinishError] = useState('')
-  // { type: 'completed' | 'cancelled' | 'expired', refunded, amount }
-  const [orderOutcome, setOrderOutcome] = useState(null)
-
-  const [orders, setOrders] = useState([])
-  const [isLoadingOrders, setIsLoadingOrders] = useState(true)
-  const [ordersPage, setOrdersPage] = useState(1)
-  const [ordersPagination, setOrdersPagination] = useState(null)
-  const [cancellingOrderId, setCancellingOrderId] = useState(null)
 
   const [balance, setBalance] = useState(0)
 
@@ -189,117 +146,34 @@ const SmsVerification = () => {
       .finally(() => setIsLoadingProducts(false))
   }, [country])
 
-  const loadOrders = () => {
-    setIsLoadingOrders(true)
-    api
-      .get('/orders', { params: { page: ordersPage, limit: HISTORY_PAGE_SIZE } })
-      .then(({ data }) => {
-        setOrders(data.data || [])
-        setOrdersPagination(data.pagination)
-      })
-      .catch(() => {
-        setOrders([])
-        setOrdersPagination(null)
-      })
-      .finally(() => setIsLoadingOrders(false))
-  }
-
-  useEffect(loadOrders, [ordersPage])
-
-  const refreshBalance = () => {
-    api
-      .get('/get-wallet-balance')
-      .then(({ data }) => setBalance(data.balance))
-      .catch(() => {})
-  }
-
-  // Marks the order finished on our side — only triggered by the user
-  // clicking "Finish Order" once they've seen/copied their code, never
-  // automatically, so the code stays visible until they're done with it.
-  const finishActiveOrder = async (orderId) => {
-    setFinishError('')
-    setIsFinishing(true)
-    try {
-      await api.post(`/order/${orderId}/finish`)
-      setOrderOutcome({ type: 'completed' })
-      setActiveOrder(null)
-      loadOrders()
-    } catch (err) {
-      setFinishError(err.message)
-    } finally {
-      setIsFinishing(false)
-    }
-  }
-
-  // Resume any order still "pending" from a previous visit — otherwise
-  // navigating away (or refreshing) before a code arrives or the order
-  // expires would leave it untracked forever, with nothing left to notice
-  // it needs finishing or refunding.
+  // Per-operator price/stock/delivery-rate for the selected service — lets
+  // the customer pick exactly which operator's number to buy.
   useEffect(() => {
+    setSelectedOperator('')
+    setOperators([])
+    if (!country || !service) return
+
+    setIsLoadingOperators(true)
     api
-      .get('/get-transactions')
-      .then(({ data }) => {
-        const pending = (data.data || []).find(
-          (t) => t.status === 'pending' && t.meta?.service === '5sim_activation' && t.meta?.orderId,
-        )
-        if (!pending) return
+      .get(`/operators/${country}/${service}`)
+      .then(({ data }) => setOperators(data.operators || []))
+      .catch(() => setOperators([]))
+      .finally(() => setIsLoadingOperators(false))
+  }, [country, service])
 
-        return api.get(`/order/${pending.meta.orderId}`).then(({ data }) => {
-          if (data.refunded) {
-            setOrderOutcome({ type: 'expired', refunded: true, amount: data.refundedAmount })
-            loadOrders()
-            refreshBalance()
-            return
-          }
-
-          setActiveOrder({ ...data.order, amount: pending.amount })
-        })
-      })
-      .catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Poll the active order until an SMS code arrives — stays on this same
-  // order-details view once it does (code just appears here), rather than
-  // jumping away. "Finish Order" is the only thing that ends the order.
-  // Also picks up an automatic refund if the backend notices it expired
-  // without ever receiving one.
-  useEffect(() => {
-    if (!activeOrder || activeOrder.sms?.length > 0) return
-
-    const interval = setInterval(() => {
-      api
-        .get(`/order/${activeOrder.id}`)
-        .then(({ data }) => {
-          if (data.refunded) {
-            setOrderOutcome({ type: 'expired', refunded: true, amount: data.refundedAmount })
-            setActiveOrder(null)
-            loadOrders()
-            refreshBalance()
-            return
-          }
-
-          const codeJustArrived = !(activeOrder.sms?.length > 0) && data.order.sms?.length > 0
-          setActiveOrder({ ...data.order, amount: activeOrder.amount })
-
-          if (codeJustArrived) {
-            playCodeReceivedSound()
-            loadOrders()
-          }
-        })
-        .catch(() => {})
-    }, ORDER_POLL_INTERVAL_MS)
-
-    return () => clearInterval(interval)
-  }, [activeOrder])
-
+  // On success, hand off to the order's own dedicated page
+  // (/sms-verification/:orderId) — that's where the live waiting-for-code
+  // view, countdown, and finish/cancel actions now live.
   const handlePurchase = async () => {
     setPurchaseError('')
     setIsPurchasing(true)
     try {
-      const { data } = await api.post('/buy/activation', { country, product: service })
-      setActiveOrder({ ...data.order, amount: data.amount })
-      loadOrders()
+      const { data } = await api.post('/buy/activation', {
+        country,
+        product: service,
+        operator: selectedOperator,
+      })
+      navigate(`/sms-verification/${data.order.id}`)
     } catch (err) {
       setPurchaseError(err.message)
     } finally {
@@ -307,384 +181,181 @@ const SmsVerification = () => {
     }
   }
 
-  const handleCancelOrder = async () => {
-    setCancelError('')
-    setIsCancelling(true)
-    try {
-      const { data } = await api.post(`/order/${activeOrder.id}/cancel`)
-      setOrderOutcome({ type: 'cancelled', refunded: data.refunded, amount: data.refundedAmount })
-      setActiveOrder(null)
-      loadOrders()
-      refreshBalance()
-    } catch (err) {
-      setCancelError(err.message)
-    } finally {
-      setIsCancelling(false)
-    }
-  }
-
-  const handleBackToPurchase = () => {
-    setActiveOrder(null)
-    setOrderOutcome(null)
-    setCancelError('')
-    setFinishError('')
-  }
-
-  const handleFinishOrder = () => finishActiveOrder(activeOrder.id)
-
-  const handleCopyNumber = async () => {
-    try {
-      await navigator.clipboard.writeText(activeOrder.phone)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // clipboard access unavailable — nothing to do
-    }
-  }
-
-  const handleCancelHistoryOrder = async (orderId) => {
-    setCancellingOrderId(orderId)
-    try {
-      await api.post(`/order/${orderId}/cancel`)
-      loadOrders()
-      refreshBalance()
-      if (activeOrder?.id === orderId) {
-        setActiveOrder(null)
-      }
-    } catch {
-      // the row simply stays "pending" if this fails — keep it simple
-    } finally {
-      setCancellingOrderId(null)
-    }
-  }
-
-  const selectedProduct = products.find((p) => p.value === service)
-  const smsCode = activeOrder?.sms?.[0]?.code
-  const insufficientBalance = Boolean(selectedProduct) && selectedProduct.cost > balance
+  const selectedOperatorData = operators.find((o) => o.operator === selectedOperator)
+  const insufficientBalance = Boolean(selectedOperatorData) && selectedOperatorData.cost > balance
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-white/10 dark:bg-customDarkSurface">
-          <h2 className="mb-5 text-xl font-semibold text-customGreen dark:text-customGreenBright">SMS Verification</h2>
+    <div className="max-w-xl p-4 sm:p-6">
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-white/10 dark:bg-customDarkSurface">
+        <h2 className="mb-5 text-xl font-semibold text-customGreen dark:text-customGreenBright">SMS Verification</h2>
 
-          {orderOutcome ? (
-            <div className="text-center">
-              <CheckCircle2 className="mx-auto mb-3 text-customGreen dark:text-customGreenBright" size={40} />
-              <p className="mb-1 font-semibold text-gray-900 dark:text-white">
-                {orderOutcome.type === 'completed'
-                  ? 'Order complete'
-                  : orderOutcome.type === 'expired'
-                    ? 'Order expired'
-                    : 'Order cancelled'}
-              </p>
-              <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
-                {orderOutcome.type === 'completed'
-                  ? 'Your verification code was received successfully.'
-                  : orderOutcome.refunded
-                    ? `${naira(orderOutcome.amount)} has been refunded to your wallet.`
-                    : 'No refund was issued for this order.'}
-              </p>
+        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Select Country</label>
+        <div className="mb-5">
+          <Select
+            options={countries}
+            value={countries.find((c) => c.value === country) || null}
+            onChange={(option) => setCountry(option ? option.value : '')}
+            getOptionValue={(o) => o.value}
+            formatOptionLabel={(o) => <CountryOptionLabel iso={o.iso} label={o.label} />}
+            isLoading={isLoadingCountries}
+            isClearable
+            isSearchable
+            placeholder={isLoadingCountries ? 'Loading countries...' : 'Search for a country...'}
+            noOptionsMessage={() => 'No matching countries'}
+            unstyled
+            classNames={selectClassNames}
+          />
+        </div>
+
+        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Popular Services</label>
+        <div className="mb-5 flex flex-wrap gap-2">
+          {POPULAR_SERVICES.map(({ value, label, Icon, color }) => {
+            const match = products.find((p) => p.value.toLowerCase() === value)
+            const isActive = Boolean(match) && service === match.value
+
+            return (
               <button
-                onClick={handleBackToPurchase}
-                className="w-full cursor-pointer rounded-xl bg-customGreen py-3 font-semibold text-white hover:bg-customGreenDark"
+                key={value}
+                type="button"
+                disabled={!match}
+                onClick={() => match && setService(match.value)}
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium ${
+                  isActive
+                    ? 'border-customGreen bg-customGreen text-white'
+                    : match
+                      ? 'cursor-pointer border-gray-300 text-gray-700 hover:border-customGreen hover:text-customGreen dark:border-white/15 dark:text-gray-300'
+                      : 'cursor-not-allowed border-gray-200 text-gray-300 opacity-50 dark:border-white/10 dark:text-gray-600'
+                }`}
               >
-                Back to Purchase
+                <Icon size={14} style={{ color }} />
+                {label}
               </button>
-            </div>
-          ) : activeOrder ? (
-            <div>
-              <div className="mb-3 grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
-                  <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Service</div>
-                  <div className="font-semibold text-gray-900 capitalize dark:text-white">{activeOrder.product}</div>
-                </div>
-                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
-                  <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Amount</div>
-                  <div className="font-semibold text-gray-900 dark:text-white">{naira(activeOrder.amount)}</div>
-                </div>
+            )
+          })}
+        </div>
+
+        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Select Service</label>
+        <div className="mb-6">
+          <Select
+            options={products}
+            value={products.find((p) => p.value === service) || null}
+            onChange={(option) => setService(option ? option.value : '')}
+            getOptionValue={(o) => o.value}
+            formatOptionLabel={(o) => <ServiceOptionLabel value={o.value} label={o.label} cost={o.cost} />}
+            isLoading={isLoadingProducts}
+            isDisabled={!country || isLoadingProducts}
+            isClearable
+            isSearchable
+            placeholder={!country ? 'Select a country first' : isLoadingProducts ? 'Loading services...' : 'Search for a service...'}
+            noOptionsMessage={() => 'No services available'}
+            unstyled
+            classNames={selectClassNames}
+          />
+        </div>
+
+        {service && (
+          <div className="mb-6">
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Select Operator
+            </label>
+
+            {isLoadingOperators ? (
+              <div className="flex items-center gap-2 py-3 text-sm text-gray-500 dark:text-gray-400">
+                <Loader2 size={16} className="animate-spin" />
+                Loading operators...
               </div>
-
-              <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
-                <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Order ID</div>
-                <div className="font-semibold text-gray-900 dark:text-white">{activeOrder.id}</div>
-              </div>
-
-              <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
-                <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Your Number</div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-lg font-semibold tracking-wide text-gray-900 dark:text-white">{activeOrder.phone}</span>
-                  <button
-                    onClick={handleCopyNumber}
-                    className="flex shrink-0 cursor-pointer items-center gap-1.5 text-sm font-semibold text-customGreen hover:text-customGreenDark dark:text-customGreenBright dark:hover:text-white"
-                  >
-                    {copied ? <Check size={16} /> : <Copy size={16} />}
-                    {copied ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">
-                <div className="mb-1 text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Verification Code</div>
-                {smsCode ? (
-                  <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-                    <CheckCircle2 size={18} className="text-customGreen dark:text-customGreenBright" />
-                    {smsCode}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                    <Loader2 size={16} className="animate-spin" />
-                    Waiting for code...
-                  </div>
-                )}
-              </div>
-
-              {!smsCode && (
-                <div className="mb-4 flex items-start gap-2 rounded-lg bg-customBlueLight px-3 py-2 text-sm text-customBlueDark dark:bg-customBlue/10 dark:text-customBlue">
-                  <Info size={16} className="mt-0.5 shrink-0" />
-                  <span>
-                    SMS not arriving? Try requesting the code again on the service, or cancel the order and try another
-                    number.
-                  </span>
-                </div>
-              )}
-
-              {cancelError && (
-                <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-400">{cancelError}</p>
-              )}
-              {finishError && (
-                <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-400">{finishError}</p>
-              )}
-
-              <div className="flex gap-3">
-                {smsCode ? (
-                  <button
-                    onClick={handleFinishOrder}
-                    disabled={isFinishing}
-                    className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold text-white ${
-                      isFinishing ? 'cursor-not-allowed bg-gray-300 dark:bg-white/10' : 'cursor-pointer bg-customGreen hover:bg-customGreenDark'
-                    }`}
-                  >
-                    {isFinishing && <Loader2 size={18} className="animate-spin" />}
-                    {isFinishing ? 'Finishing...' : 'Finish Order'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleCancelOrder}
-                    disabled={isCancelling}
-                    className={`flex w-full items-center justify-center gap-2 rounded-xl border py-3 font-semibold ${
-                      isCancelling
-                        ? 'cursor-not-allowed border-gray-200 text-gray-400 dark:border-white/10 dark:text-gray-600'
-                        : 'cursor-pointer border-gray-300 text-customGreen hover:bg-customGreenDark hover:text-white dark:border-white/15 dark:text-customGreenBright'
-                    }`}
-                  >
-                    {isCancelling ? <Loader2 size={18} className="animate-spin" /> : <XCircle size={18} />}
-                    {isCancelling ? 'Cancelling...' : 'Cancel Order'}
-                  </button>
-                )}
-              </div>
-            </div>
-          ) : (
-            <>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Select Country</label>
-              <div className="mb-5">
-                <Select
-                  options={countries}
-                  value={countries.find((c) => c.value === country) || null}
-                  onChange={(option) => setCountry(option ? option.value : '')}
-                  getOptionValue={(o) => o.value}
-                  formatOptionLabel={(o) => <CountryOptionLabel iso={o.iso} label={o.label} />}
-                  isLoading={isLoadingCountries}
-                  isClearable
-                  isSearchable
-                  placeholder={isLoadingCountries ? 'Loading countries...' : 'Search for a country...'}
-                  noOptionsMessage={() => 'No matching countries'}
-                  unstyled
-                  classNames={selectClassNames}
-                />
-              </div>
-
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Popular Services</label>
-              <div className="mb-5 flex flex-wrap gap-2">
-                {POPULAR_SERVICES.map(({ value, label, Icon, color }) => {
-                  const match = products.find((p) => p.value.toLowerCase() === value)
-                  const isActive = Boolean(match) && service === match.value
-
+            ) : operators.length === 0 ? (
+              <p className="py-3 text-sm text-gray-400 dark:text-gray-500">
+                No operators currently in stock for this service.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {operators.map((o, index) => {
+                  const isSelected = selectedOperator === o.operator
+                  const isRecommended = index === 0
                   return (
                     <button
-                      key={value}
+                      key={o.operator}
                       type="button"
-                      disabled={!match}
-                      onClick={() => match && setService(match.value)}
-                      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium ${
-                        isActive
-                          ? 'border-customGreen bg-customGreen text-white'
-                          : match
-                            ? 'cursor-pointer border-gray-300 text-gray-700 hover:border-customGreen hover:text-customGreen dark:border-white/15 dark:text-gray-300'
-                            : 'cursor-not-allowed border-gray-200 text-gray-300 opacity-50 dark:border-white/10 dark:text-gray-600'
+                      onClick={() => setSelectedOperator(o.operator)}
+                      className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border px-4 py-3 text-left ${
+                        isSelected
+                          ? 'border-customGreen bg-customGreen/5 dark:border-customGreenBright dark:bg-customGreenBright/10'
+                          : 'cursor-pointer border-gray-200 hover:border-gray-300 dark:border-white/10 dark:hover:border-white/20'
                       }`}
                     >
-                      <Icon size={14} style={{ color }} />
-                      {label}
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <SignalHigh
+                          size={18}
+                          className={`shrink-0 ${isSelected ? 'text-customGreen dark:text-customGreenBright' : 'text-gray-400'}`}
+                        />
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-semibold text-gray-900 dark:text-white">{o.operator}</span>
+                            {isRecommended && (
+                              <span className="rounded-full bg-customBlue px-1.5 py-0.5 text-[9px]  whitespace-nowrap text-white">
+                                Best Delivery
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{o.count.toLocaleString()} in stock</div>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2.5">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap ${rateStyle(o.rate)}`}>
+                          {o.rate}% delivery
+                        </span>
+                        <span className="font-semibold text-gray-900 dark:text-white">{naira(o.cost)}</span>
+                      </div>
                     </button>
                   )
                 })}
               </div>
-
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Select Service</label>
-              <div className="mb-6">
-                <Select
-                  options={products}
-                  value={products.find((p) => p.value === service) || null}
-                  onChange={(option) => setService(option ? option.value : '')}
-                  getOptionValue={(o) => o.value}
-                  formatOptionLabel={(o) => <ServiceOptionLabel value={o.value} label={o.label} cost={o.cost} />}
-                  isLoading={isLoadingProducts}
-                  isDisabled={!country || isLoadingProducts}
-                  isClearable
-                  isSearchable
-                  placeholder={!country ? 'Select a country first' : isLoadingProducts ? 'Loading services...' : 'Search for a service...'}
-                  noOptionsMessage={() => 'No services available'}
-                  unstyled
-                  classNames={selectClassNames}
-                />
-              </div>
-
-              <div className="mb-4 flex items-start gap-2 rounded-lg bg-customBlueLight px-3 py-2 text-sm text-customBlueDark dark:bg-customBlue/10 dark:text-customBlue">
-                <Info size={16} className="mt-0.5 shrink-0" />
-                <span>
-                  Your IP address' country should be the same as the country of the phone number you bought. Be sure
-                  to use a proxy or VPN.
-                </span>
-              </div>
-
-              {insufficientBalance && (
-                <div className="mb-4 flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-400">
-                  <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-                  <span>
-                    Balance too low to complete this order.{' '}
-                    <Link to="/fund-wallet" className="font-semibold underline hover:text-red-700 dark:hover:text-red-300">
-                      Fund Wallet
-                    </Link>
-                  </span>
-                </div>
-              )}
-
-              {purchaseError && (
-                <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-400">{purchaseError}</p>
-              )}
-
-              <button
-                onClick={handlePurchase}
-                disabled={!service || isPurchasing || insufficientBalance}
-                className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-semibold text-white ${
-                  service && !isPurchasing && !insufficientBalance
-                    ? 'cursor-pointer bg-customGreen hover:bg-customGreenDark'
-                    : 'cursor-not-allowed bg-gray-300 dark:bg-white/10'
-                }`}
-              >
-                {isPurchasing && <Loader2 size={18} className="animate-spin" />}
-                {isPurchasing
-                  ? 'Purchasing...'
-                  : selectedProduct
-                    ? `Pay - ${naira(selectedProduct.cost)}`
-                    : 'Pay'}
-              </button>
-            </>
-          )}
-        </section>
-
-        <section className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-white/10 dark:bg-customDarkSurface">
-          <h2 className="mb-5 text-2xl font-bold text-gray-900 dark:text-white">SMS Order History</h2>
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-225 text-left text-sm">
-              <thead>
-                <tr className="bg-gray-50 text-xs tracking-wide text-gray-500 uppercase dark:bg-white/5 dark:text-gray-400">
-                  <th className="px-4 py-3">Order ID</th>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Phone Number</th>
-                  <th className="px-4 py-3">Code</th>
-                  <th className="px-4 py-3">Service</th>
-                  <th className="px-4 py-3">Amount</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoadingOrders ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
-                      <Loader2 size={18} className="mx-auto animate-spin" />
-                    </td>
-                  </tr>
-                ) : orders.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
-                      No verification purchases yet.
-                    </td>
-                  </tr>
-                ) : (
-                  orders.map((o) => (
-                    <tr key={o._id} className="border-b border-gray-100 dark:border-white/10">
-                      <td className="px-4 py-4 text-gray-800 dark:text-gray-200">{o.orderId}</td>
-                      <td className="px-4 py-4 text-gray-600 dark:text-gray-400">{formatOrderDate(o.createdAt)}</td>
-                      <td className="px-4 py-4 text-gray-600 dark:text-gray-400">{o.phone || '—'}</td>
-                      <td className="px-4 py-4 text-gray-600 dark:text-gray-400">{o.code || ''}</td>
-                      <td className="px-4 py-4 text-gray-600 capitalize dark:text-gray-400">{o.service}</td>
-                      <td className="px-4 py-4 text-gray-800 dark:text-gray-200">{naira(o.amount)}</td>
-                      <td className="px-4 py-4">
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
-                            ORDER_STATUS_STYLES[o.status] || 'bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400'
-                          }`}
-                        >
-                          {o.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        {o.status === 'pending' && (
-                          <button
-                            onClick={() => handleCancelHistoryOrder(o.orderId)}
-                            disabled={cancellingOrderId === o.orderId}
-                            className="cursor-pointer text-sm font-semibold text-red-500 hover:text-red-600 disabled:cursor-not-allowed disabled:text-gray-300 dark:text-red-400 dark:hover:text-red-300 dark:disabled:text-gray-600"
-                          >
-                            {cancellingOrderId === o.orderId ? 'Cancelling...' : 'Cancel'}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            )}
           </div>
+        )}
 
-          {ordersPagination && ordersPagination.totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-              <span>
-                Page {ordersPagination.page} of {ordersPagination.totalPages}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setOrdersPage((p) => p - 1)}
-                  disabled={!ordersPagination.hasPrevPage}
-                  className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/15 dark:hover:bg-white/5"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setOrdersPage((p) => p + 1)}
-                  disabled={!ordersPagination.hasNextPage}
-                  className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/15 dark:hover:bg-white/5"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
-        </section>
-      </div>
+        <div className="mb-4 flex items-start gap-2 rounded-lg bg-customBlueLight px-3 py-2 text-sm text-customBlueDark dark:bg-customBlue/10 dark:text-customBlue">
+          <Info size={16} className="mt-0.5 shrink-0" />
+          <span>
+            Your IP address' country should be the same as the country of the phone number you bought. Be sure
+            to use a proxy or VPN.
+          </span>
+        </div>
+
+        {insufficientBalance && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-400">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            <span>
+              Balance too low to complete this order.{' '}
+              <Link to="/fund-wallet" className="font-semibold underline hover:text-red-700 dark:hover:text-red-300">
+                Fund Wallet
+              </Link>
+            </span>
+          </div>
+        )}
+
+        {purchaseError && (
+          <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-400">{purchaseError}</p>
+        )}
+
+        <button
+          onClick={handlePurchase}
+          disabled={!selectedOperator || isPurchasing || insufficientBalance}
+          className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-semibold text-white ${
+            selectedOperator && !isPurchasing && !insufficientBalance
+              ? 'cursor-pointer bg-customGreen hover:bg-customGreenDark'
+              : 'cursor-not-allowed bg-gray-300 dark:bg-white/10'
+          }`}
+        >
+          {isPurchasing && <Loader2 size={18} className="animate-spin" />}
+          {isPurchasing
+            ? 'Purchasing...'
+            : selectedOperatorData
+              ? `Pay - ${naira(selectedOperatorData.cost)}`
+              : 'Pay'}
+        </button>
+      </section>
     </div>
   )
 }
